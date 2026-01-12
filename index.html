@@ -51,8 +51,10 @@
         .terminal-height { height: 120px; }
         @media (min-width: 768px) { .terminal-height { height: 160px; } }
 
-        .file-item:active { background-color: #1f2937; }
-        .breadcrumb-item:last-child { color: #8b949e; pointer-events: none; }
+        .btn-action {
+            transition: all 0.2s ease;
+        }
+        .btn-action:active { transform: scale(0.95); }
     </style>
 </head>
 <body class="overflow-hidden">
@@ -65,8 +67,8 @@
         <aside id="sidebar" class="fixed inset-y-0 right-0 w-64 bg-[#161b22] border-l border-[#30363d] z-50 transform translate-x-full md:translate-x-0 sidebar-transition md:relative">
             <div class="flex flex-col h-full">
                 <div class="p-5 border-b border-[#30363d] flex items-center justify-between">
-                    <span class="font-bold text-lg flex items-center gap-2 text-white">
-                        <i class="fab fa-github text-2xl"></i> GitHub Pro
+                    <span class="font-bold text-lg flex items-center gap-2 text-white text-nowrap">
+                        <i class="fab fa-github text-2xl"></i> GitHub Manager
                     </span>
                     <button onclick="toggleSidebar()" class="md:hidden text-gray-400">
                         <i class="fas fa-times text-xl"></i>
@@ -78,7 +80,7 @@
                         <i class="fas fa-chart-pie w-5"></i> لوحة التحكم
                     </button>
                     <button onclick="showTab('explorer')" class="nav-item w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#21262d] transition-all text-sm" id="btn-explorer">
-                        <i class="fas fa-search w-5"></i> المستودعات
+                        <i class="fas fa-list w-5"></i> المستودعات
                     </button>
                     <button onclick="showTab('uploader')" class="nav-item w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#21262d] transition-all text-sm" id="btn-uploader">
                         <i class="fas fa-cloud-upload-alt w-5"></i> رفع وتحديث
@@ -93,11 +95,11 @@
                 </nav>
 
                 <div id="sidebarUser" class="p-4 border-t border-[#30363d] bg-[#0d1117]/50 hidden">
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-3 text-right">
                         <img id="userAvatar" src="" class="w-10 h-10 rounded-full border border-[#30363d]">
                         <div class="overflow-hidden">
                             <div id="userLogin" class="text-sm font-bold text-white truncate">Username</div>
-                            <div id="userType" class="text-[10px] text-gray-500 uppercase">Pro User</div>
+                            <div id="userType" class="text-[10px] text-gray-500 uppercase">مستخدم Pro</div>
                         </div>
                     </div>
                 </div>
@@ -105,7 +107,7 @@
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-1 flex flex-col min-w-0">
+        <main class="flex-1 flex flex-col min-w-0 relative">
             
             <header class="h-14 md:h-16 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
                 <div class="flex items-center gap-3">
@@ -113,7 +115,7 @@
                         <i class="fas fa-bars text-xl"></i>
                     </button>
                     <div id="currentRepoBadge" class="hidden flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 px-3 py-1 rounded-full text-blue-400 text-[11px] font-bold shadow-sm">
-                        <i class="fas fa-box"></i> <span id="selectedRepoName" class="truncate max-w-[80px] md:max-w-none">اسم المستودع</span>
+                        <i class="fas fa-box"></i> <span id="selectedRepoName" class="truncate max-w-[120px] md:max-w-none text-nowrap">اسم المستودع</span>
                         <i class="fas fa-times cursor-pointer hover:text-white" onclick="deselectRepo()"></i>
                     </div>
                 </div>
@@ -162,37 +164,16 @@
                     <div id="userCardMobile" class="md:hidden bg-[#161b22] border border-[#30363d] p-5 rounded-2xl flex flex-col items-center text-center gap-4"></div>
                 </div>
 
-                <!-- Explorer Tab -->
+                <!-- Explorer Tab (Simplified Repo List) -->
                 <div id="tab-explorer" class="tab-content space-y-4">
-                    <div id="repoListView">
-                        <div class="flex justify-between items-center px-1 mb-4">
-                            <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                                <i class="fas fa-search text-blue-500"></i> المستودعات
-                            </h2>
-                            <button onclick="fetchAllData()" class="text-xs text-gray-500 hover:text-white transition-colors"><i class="fas fa-sync"></i> تحديث</button>
-                        </div>
-                        <div id="reposContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div class="col-span-full py-20 text-center text-gray-500 italic">أدخل الـ Token لعرض مشاريعك</div>
-                        </div>
+                    <div class="flex justify-between items-center px-1 mb-4">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fas fa-list text-blue-500"></i> قائمة المستودعات
+                        </h2>
+                        <button onclick="fetchAllData()" class="text-xs text-gray-500 hover:text-white transition-colors"><i class="fas fa-sync"></i> تحديث</button>
                     </div>
-
-                    <!-- File Browser View -->
-                    <div id="fileBrowserView" class="hidden space-y-4 animate-in">
-                        <div class="flex items-center justify-between">
-                            <button onclick="backToRepoList()" class="bg-[#21262d] border border-[#30363d] px-3 py-1.5 rounded-lg text-blue-500 text-xs flex items-center gap-2 hover:bg-[#30363d]">
-                                <i class="fas fa-arrow-right"></i> العودة للقائمة
-                            </button>
-                            <div class="text-[10px] text-gray-500 uppercase tracking-widest font-bold" id="browserTitle">Browsing Root</div>
-                        </div>
-                        
-                        <!-- Breadcrumbs -->
-                        <div id="breadcrumbs" class="flex items-center gap-2 overflow-x-auto whitespace-nowrap bg-[#0d1117] p-3 rounded-xl border border-[#30363d] text-[11px] custom-scroll shadow-inner">
-                            <!-- Injected by JS -->
-                        </div>
-
-                        <div id="filesContainer" class="bg-[#161b22] border border-[#30363d] rounded-2xl overflow-hidden divide-y divide-[#30363d] shadow-2xl">
-                            <!-- Files/Folders injected here -->
-                        </div>
+                    <div id="reposContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div class="col-span-full py-20 text-center text-gray-500 italic">يرجى تسجيل الدخول لعرض مشاريعك</div>
                     </div>
                 </div>
 
@@ -201,49 +182,38 @@
                     <div class="bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl space-y-6">
                         <div class="flex items-center gap-4 border-b border-[#30363d] pb-4">
                             <div class="bg-blue-500/10 p-3 rounded-xl shadow-inner"><i class="fas fa-cloud-upload-alt text-blue-500 text-2xl"></i></div>
-                            <div>
+                            <div class="text-right">
                                 <h2 class="text-lg font-bold text-white">الرفع الذكي (Push)</h2>
-                                <p class="text-[11px] text-gray-500">رفع الملفات مباشرة مع معالجة ZIP تلقائياً</p>
+                                <p class="text-[11px] text-gray-500">رفع الملفات الفردية أو مجلدات ZIP</p>
                             </div>
                         </div>
-
                         <div id="uploaderStatus" class="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl flex items-center gap-3 text-yellow-500 text-[10px] font-bold">
-                            <i class="fas fa-exclamation-triangle"></i> يجب اختيار مستودع أولاً من صفحة "المستودعات"
+                            <i class="fas fa-exclamation-triangle"></i> يجب اختيار مستودع أولاً للبدء بالرفع.
                         </div>
-
                         <div class="space-y-4">
-                            <label id="dropZone" class="block border-2 border-dashed border-[#30363d] rounded-2xl p-10 text-center hover:border-blue-500 transition-all cursor-pointer">
-                                <i class="fas fa-file-archive text-4xl text-gray-600 mb-3 block"></i>
-                                <span class="text-sm text-gray-300 font-bold block">اضغط لاختيار ملفات أو ZIP</span>
+                            <label class="block border-2 border-dashed border-[#30363d] rounded-2xl p-10 text-center hover:border-blue-500 transition-all cursor-pointer">
+                                <i class="fas fa-file-import text-4xl text-gray-600 mb-3 block"></i>
+                                <span class="text-sm text-gray-300 font-bold block">اضغط لاختيار ملفات الرفع</span>
                                 <input type="file" id="fileInput" multiple class="hidden" onchange="handleFileSelection(this.files)">
                             </label>
 
-                            <div class="flex items-center justify-between p-4 bg-[#0d1117] rounded-xl border border-[#30363d] shadow-inner">
-                                <div class="flex items-center gap-3">
+                            <div class="flex items-center justify-between p-4 bg-[#0d1117] rounded-xl border border-[#30363d]">
+                                <div class="flex items-center gap-3 text-right">
                                     <label class="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" id="wipeRepoCheck" class="sr-only peer">
                                         <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
                                     </label>
                                     <div>
-                                        <div class="text-xs font-bold text-white">تفعيل Wipe Content</div>
-                                        <div class="text-[9px] text-gray-500">حذف الملفات القديمة قبل الرفع</div>
+                                        <div class="text-xs font-bold text-white">تفعيل مسح المحتويات (Wipe)</div>
+                                        <div class="text-[9px] text-gray-500">حذف الملفات القديمة قبل الرفع الجديد</div>
                                     </div>
                                 </div>
-                                <i class="fas fa-trash-alt text-gray-700"></i>
+                                <i class="fas fa-broom text-gray-700"></i>
                             </div>
 
                             <button onclick="startUploadProcess()" id="btnStartUpload" class="w-full bg-[#238636] hover:bg-[#2ea043] py-4 rounded-xl font-bold text-white shadow-lg disabled:opacity-30 disabled:cursor-not-allowed text-sm">
                                 تنفيذ الرفع الآن
                             </button>
-                        </div>
-                    </div>
-
-                    <!-- New Repo Form -->
-                    <div class="bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl">
-                        <h2 class="text-md font-bold text-white mb-4 flex items-center gap-2"><i class="fas fa-plus-circle text-blue-500"></i> إنشاء مستودع جديد</h2>
-                        <div class="flex flex-col sm:flex-row gap-3">
-                            <input type="text" id="newRepoName" placeholder="اسم المشروع..." class="flex-1 bg-[#0d1117] border border-[#30363d] rounded-xl px-4 py-2 text-sm text-white focus:border-blue-500 transition-all">
-                            <button onclick="createNewRepo()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-xl font-bold text-white text-sm">إنشاء</button>
                         </div>
                     </div>
                 </div>
@@ -255,22 +225,10 @@
                 </div>
 
                 <!-- Settings Tab -->
-                <div id="tab-settings" class="tab-content max-w-2xl mx-auto">
+                <div id="tab-settings" class="tab-content max-w-2xl mx-auto text-right">
                     <div class="bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl">
-                        <h2 class="text-lg font-bold text-white mb-6 border-b border-[#30363d] pb-4">إعدادات التطبيق</h2>
-                        <div class="space-y-6">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <div class="text-sm font-bold">الخصوصية والأمان</div>
-                                    <div class="text-[10px] text-gray-500">مسح بيانات الدخول المخزنة محلياً</div>
-                                </div>
-                                <button onclick="clearAppData()" class="text-red-500 text-xs font-bold hover:underline">مسح التوكن</button>
-                            </div>
-                            <div class="flex justify-between items-center border-t border-[#30363d] pt-6">
-                                <div class="text-[10px] text-gray-500">GitHub Manager Ultra - Stable v1.2</div>
-                                <div class="text-[10px] text-gray-600 tracking-tighter uppercase font-bold">Files Engine Integrated</div>
-                            </div>
-                        </div>
+                        <h2 class="text-lg font-bold text-white mb-6 border-b border-[#30363d] pb-4">إعدادات الحساب</h2>
+                        <button onclick="clearAppData()" class="text-red-500 text-xs font-bold hover:underline">تسجيل الخروج ومسح التوكن</button>
                     </div>
                 </div>
             </div>
@@ -281,28 +239,20 @@
                     <span class="text-[9px] font-mono font-bold text-gray-500 uppercase flex items-center gap-2 tracking-widest">
                         <i class="fas fa-terminal"></i> Terminal Output
                     </span>
-                    <button onclick="clearLogs()" class="text-[9px] text-gray-500 hover:text-white uppercase font-bold transition-colors">Clear</button>
+                    <button onclick="clearLogs()" class="text-[9px] text-gray-500 hover:text-white uppercase font-bold">مسح</button>
                 </div>
-                <div id="terminal" class="p-3 terminal-font text-[10px] md:text-[11px] overflow-y-auto h-[calc(100%-35px)] custom-scroll"></div>
+                <div id="terminal" class="p-3 terminal-font text-[10px] md:text-[11px] overflow-y-auto h-[calc(100%-35px)] custom-scroll text-right"></div>
             </div>
         </main>
     </div>
 
-    <!-- Hidden Replace Input -->
-    <input type="file" id="replaceFileInput" class="hidden" onchange="executeReplacement(this.files)">
-
-    <!-- Mobile Token Modal -->
+    <!-- Token Modal -->
     <div id="tokenModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#161b22] border border-[#30363d] p-8 rounded-3xl w-full max-w-sm space-y-6 shadow-2xl animate-in scale-95">
+        <div class="bg-[#161b22] border border-[#30363d] p-8 rounded-3xl w-full max-w-sm space-y-6 shadow-2xl">
             <h3 class="text-white font-bold text-center">أدخل رمز الدخول (Token)</h3>
-            <div class="space-y-2">
-                <input type="password" id="tokenInputMobile" class="w-full bg-[#0d1117] border border-[#30363d] rounded-2xl px-4 py-4 text-white text-center focus:border-blue-500" placeholder="ghp_xxxxxx">
-                <p class="text-[9px] text-gray-500 text-center italic">تأكد من أن التوكن يمتلك صلاحية repo.</p>
-            </div>
-            <div class="flex flex-col gap-2">
-                <button onclick="validateTokenFromModal()" class="w-full bg-blue-600 py-4 rounded-2xl text-white font-bold text-sm shadow-lg active:scale-95 transition-all">اتصال الآن</button>
-                <button onclick="closeTokenModal()" class="w-full py-2 text-gray-500 text-xs font-bold uppercase">إلغاء</button>
-            </div>
+            <input type="password" id="tokenInputMobile" class="w-full bg-[#0d1117] border border-[#30363d] rounded-2xl px-4 py-4 text-white text-center" placeholder="ghp_xxxxxx">
+            <button onclick="validateTokenFromModal()" class="w-full bg-blue-600 py-4 rounded-2xl text-white font-bold text-sm">اتصال</button>
+            <button onclick="closeTokenModal()" class="w-full py-2 text-gray-500 text-xs font-bold uppercase">إلغاء</button>
         </div>
     </div>
 
@@ -313,61 +263,51 @@
             user: null,
             repos: [],
             selectedRepo: null,
-            activeTab: 'dashboard',
-            filesToUpload: [],
-            currentPath: '',
-            replacePath: '',
-            replaceSha: ''
+            activeTab: 'dashboard'
         };
 
         const elements = {
             terminal: document.getElementById('terminal'),
             sidebar: document.getElementById('sidebar'),
-            backdrop: document.getElementById('sidebarBackdrop'),
             tokenInput: document.getElementById('tokenInput'),
             uploaderStatus: document.getElementById('uploaderStatus'),
             btnStartUpload: document.getElementById('btnStartUpload'),
             reposContainer: document.getElementById('reposContainer'),
-            filesContainer: document.getElementById('filesContainer'),
-            repoListView: document.getElementById('repoListView'),
-            fileBrowserView: document.getElementById('fileBrowserView'),
-            breadcrumbs: document.getElementById('breadcrumbs')
+            gistsContainer: document.getElementById('gistsContainer')
         };
 
-        // --- Core Functions ---
-        
+        // --- Initialization ---
         window.onload = () => {
             if (state.token) {
                 elements.tokenInput.value = state.token;
                 validateToken();
             }
             adjustTerminalWidth();
-            log("GitHub Manager Ultra جاهز للاستخدام.", "info");
+            log("System Ready. Mobile Optimized.", "info");
         };
 
         window.onresize = adjustTerminalWidth;
 
         function adjustTerminalWidth() {
-            const terminal = document.getElementById('terminalContainer');
-            if (window.innerWidth >= 768) terminal.style.marginRight = "16rem";
-            else terminal.style.marginRight = "0";
+            const container = document.getElementById('terminalContainer');
+            if (window.innerWidth >= 768) container.style.marginRight = "16rem";
+            else container.style.marginRight = "0";
         }
 
+        // --- Utility Functions ---
         function toggleSidebar() {
             elements.sidebar.classList.toggle('translate-x-full');
-            elements.backdrop.classList.toggle('hidden');
+            document.getElementById('sidebarBackdrop').classList.toggle('hidden');
         }
 
         function log(msg, type = 'info') {
             const time = new Date().toLocaleTimeString([], { hour12: false });
             const div = document.createElement('div');
-            div.className = "mb-1 leading-relaxed border-r-2 pr-2 border-transparent";
-            
+            div.className = "mb-1 leading-relaxed";
             let color = "text-blue-400";
-            if(type === 'error') { color = "text-red-500 font-bold border-red-500"; }
-            if(type === 'success') { color = "text-green-500 border-green-500"; }
-            if(type === 'warning') { color = "text-yellow-500 border-yellow-500"; }
-
+            if(type === 'error') color = "text-red-500 font-bold";
+            if(type === 'success') color = "text-green-500";
+            if(type === 'warning') color = "text-yellow-500";
             div.innerHTML = `<span class="text-gray-600">[${time}]</span> <span class="${color}">${msg}</span>`;
             elements.terminal.appendChild(div);
             elements.terminal.scrollTop = elements.terminal.scrollHeight;
@@ -378,49 +318,42 @@
         function showTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active-tab'));
-            
             document.getElementById(`tab-${tabId}`).classList.add('active');
             document.getElementById(`btn-${tabId}`).classList.add('active-tab');
             state.activeTab = tabId;
-
             if (window.innerWidth < 768) toggleSidebar();
         }
 
+        // --- GitHub API Actions ---
         async function githubFetch(endpoint, options = {}) {
             const url = `https://api.github.com/${endpoint}`;
-            const headers = {
-                'Authorization': `token ${state.token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                ...options.headers
-            };
-            return fetch(url, { ...options, headers });
+            return fetch(url, {
+                ...options,
+                headers: {
+                    'Authorization': `token ${state.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    ...options.headers
+                }
+            });
         }
 
         async function validateToken() {
             const val = elements.tokenInput.value.trim();
             if(!val) return;
-            
             state.token = val;
             const icon = document.getElementById('syncIcon');
             icon.classList.add('animate-spin');
-
             try {
                 const res = await githubFetch('user');
                 if (res.ok) {
                     state.user = await res.json();
                     localStorage.setItem('gh_token', state.token);
                     updateUIWithUser();
-                    log(`تم تسجيل الدخول: ${state.user.login}`, "success");
+                    log(`Authenticated: ${state.user.login}`, "success");
                     fetchAllData();
-                } else {
-                    log("التوكن غير صالح. يرجى التأكد منه.", "error");
-                    state.token = "";
-                }
-            } catch (err) {
-                log(`خطأ: ${err.message}`, "error");
-            } finally {
-                icon.classList.remove('animate-spin');
-            }
+                } else log("Invalid Token.", "error");
+            } catch (err) { log(err.message, "error"); }
+            finally { icon.classList.remove('animate-spin'); }
         }
 
         function updateUIWithUser() {
@@ -428,234 +361,105 @@
             document.getElementById('sidebarUser').classList.remove('hidden');
             document.getElementById('userAvatar').src = u.avatar_url;
             document.getElementById('userLogin').innerText = u.login;
-
             document.getElementById('stat-repos').innerText = u.public_repos;
             document.getElementById('stat-followers').innerText = u.followers;
-
-            const cardHtml = `
-                <img src="${u.avatar_url}" class="w-32 h-32 rounded-3xl border-4 border-[#30363d] shadow-2xl">
-                <div class="text-right flex-1 space-y-2">
-                    <h1 class="text-2xl font-bold text-white">${u.name || u.login}</h1>
-                    <p class="text-xs text-gray-400">${u.bio || 'مستخدم GitHub محترف'}</p>
-                </div>
-            `;
-            document.getElementById('userCard').innerHTML = cardHtml;
-            document.getElementById('userCardMobile').innerHTML = cardHtml;
+            const html = `<img src="${u.avatar_url}" class="w-24 h-24 rounded-3xl border-4 border-[#30363d]"><div class="text-center md:text-right flex-1 space-y-1"><h1 class="text-xl font-bold text-white">${u.name || u.login}</h1><p class="text-xs text-gray-400">${u.bio || ''}</p></div>`;
+            document.getElementById('userCard').innerHTML = html;
+            document.getElementById('userCardMobile').innerHTML = html;
         }
 
         async function fetchAllData() {
             if(!state.token) return;
             try {
-                const [reposRes, gistsRes] = await Promise.all([
-                    githubFetch('user/repos?sort=updated&per_page=100'),
-                    githubFetch('gists')
-                ]);
-
-                if(reposRes.ok) {
-                    state.repos = await reposRes.json();
+                const res = await githubFetch('user/repos?sort=updated&per_page=100');
+                if(res.ok) {
+                    state.repos = await res.json();
                     renderRepos();
                 }
-                if(gistsRes.ok) {
-                    const gists = await gistsRes.json();
-                    document.getElementById('stat-gists').innerText = gists.length;
-                    renderGists(gists);
+                const gRes = await githubFetch('gists');
+                if(gRes.ok) {
+                    const g = await gRes.json();
+                    document.getElementById('stat-gists').innerText = g.length;
+                    renderGists(g);
                 }
-            } catch (e) { log("خطأ في جلب البيانات.", "error"); }
+            } catch (e) { log("Data fetch error.", "error"); }
         }
 
         function renderRepos() {
             elements.reposContainer.innerHTML = state.repos.map(r => `
-                <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-2xl hover:border-blue-500 transition-all flex flex-col justify-between shadow-sm">
-                    <div class="flex justify-between items-start mb-3">
-                        <h3 class="font-bold text-white text-sm truncate w-36">${r.name}</h3>
-                        <div class="flex gap-3">
-                            <button onclick="browseRepo('${r.owner.login}', '${r.name}')" class="text-blue-500 hover:scale-110 transition-transform" title="استعراض الملفات">
-                                <i class="fas fa-eye text-xs"></i>
-                            </button>
-                            <button onclick="selectRepoById(${r.id})" class="text-green-500 hover:scale-110 transition-transform" title="رفع ملفات">
-                                <i class="fas fa-plus-circle text-xs"></i>
-                            </button>
-                        </div>
+                <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-2xl flex flex-col justify-between shadow-lg">
+                    <div class="mb-4">
+                        <h3 class="font-bold text-white text-md truncate mb-1">${r.name}</h3>
+                        <p class="text-[10px] text-gray-500 line-clamp-2 h-8 leading-relaxed">${r.description || 'لا يوجد وصف للمستودع'}</p>
                     </div>
-                    <p class="text-[10px] text-gray-500 line-clamp-2 h-8 mb-4">${r.description || 'لا يوجد وصف.'}</p>
-                    <div class="flex justify-between items-center text-[9px] text-gray-600 font-bold uppercase tracking-tighter">
-                        <span><i class="fas fa-circle text-blue-500 text-[6px]"></i> ${r.language || 'Code'}</span>
-                        <span>${new Date(r.updated_at).toLocaleDateString()}</span>
+                    
+                    <div class="flex gap-2">
+                        <button onclick="downloadRepoZip('${r.owner.login}', '${r.name}')" class="flex-1 bg-[#21262d] border border-[#30363d] hover:bg-[#30363d] text-blue-400 py-2.5 rounded-xl text-xs font-bold btn-action flex items-center justify-center gap-2">
+                            <i class="fas fa-file-archive"></i> تحميل ZIP
+                        </button>
+                        <button onclick="selectForUpload(${r.id})" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold btn-action flex items-center justify-center gap-2">
+                            <i class="fas fa-upload"></i> رفع ملفات
+                        </button>
                     </div>
                 </div>
             `).join('');
         }
 
-        // --- Browser Logic (NEW) ---
-
-        async function browseRepo(owner, repo, path = '') {
-            state.selectedRepo = { owner: { login: owner }, name: repo };
-            state.currentPath = path;
-            
-            elements.repoListView.classList.add('hidden');
-            elements.fileBrowserView.classList.remove('hidden');
-            elements.browserTitle.innerText = `${repo} / ${path || 'Root'}`;
-            
-            log(`جاري استكشاف المجلد: ${path || '/'}`, "info");
-            renderBreadcrumbs(path);
-
+        async function downloadRepoZip(owner, repo) {
+            log(`جاري طلب تحميل المستودع ${repo} كملف ZIP...`, "warning");
             try {
-                const res = await githubFetch(`repos/${owner}/${repo}/contents/${path}`);
-                if(res.ok) {
-                    const items = await res.json();
-                    renderContents(items);
-                } else {
-                    log("فشل الوصول إلى المجلد.", "error");
-                }
-            } catch(e) { log(e.message, "error"); }
-        }
-
-        function renderBreadcrumbs(path) {
-            const parts = path.split('/').filter(p => p);
-            let html = `<span onclick="browseRepo('${state.selectedRepo.owner.login}', '${state.selectedRepo.name}', '')" class="cursor-pointer hover:text-white text-blue-500 font-bold px-1 rounded hover:bg-[#21262d]">Root</span>`;
-            let current = '';
-            parts.forEach((p, idx) => {
-                current += (current ? '/' : '') + p;
-                html += ` <i class="fas fa-chevron-left text-[8px] mx-1 text-gray-600"></i> <span onclick="browseRepo('${state.selectedRepo.owner.login}', '${state.selectedRepo.name}', '${current}')" class="breadcrumb-item cursor-pointer hover:text-white text-blue-500 font-bold px-1 rounded hover:bg-[#21262d]">${p}</span>`;
-            });
-            elements.breadcrumbs.innerHTML = html;
-        }
-
-        function renderContents(items) {
-            if(!Array.isArray(items)) items = [items];
-            
-            // Sort: folders first
-            items.sort((a,b) => (b.type === 'dir') - (a.type === 'dir'));
-
-            elements.filesContainer.innerHTML = items.map(item => `
-                <div class="file-item p-4 flex items-center justify-between transition-all active:bg-[#21262d]">
-                    <div class="flex items-center gap-3 flex-1 min-w-0" onclick="${item.type === 'dir' ? `browseRepo('${state.selectedRepo.owner.login}', '${state.selectedRepo.name}', '${item.path}')` : ''}">
-                        <i class="fas ${item.type === 'dir' ? 'fa-folder text-yellow-500 text-lg' : 'fa-file text-blue-400 text-lg'}"></i>
-                        <span class="text-xs truncate text-gray-200 font-medium">${item.name}</span>
-                    </div>
-                    <div class="flex items-center gap-4 ml-3">
-                        ${item.type === 'file' ? `
-                            <button onclick="downloadFile('${item.download_url}', '${item.name}')" class="text-gray-500 p-2 hover:text-white" title="تحميل">
-                                <i class="fas fa-download text-xs"></i>
-                            </button>
-                            <button onclick="triggerReplace('${item.path}', '${item.sha}')" class="text-blue-500 p-2 hover:text-blue-400" title="استبدال">
-                                <i class="fas fa-sync-alt text-xs"></i>
-                            </button>
-                            <button onclick="deleteFile('${item.path}', '${item.sha}')" class="text-red-500 p-2 hover:text-red-400" title="حذف">
-                                <i class="fas fa-trash-alt text-xs"></i>
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            `).join('');
-            
-            if(items.length === 0) {
-                elements.filesContainer.innerHTML = `<div class="p-16 text-center text-gray-600 italic text-xs">المجلد فارغ تماماً.</div>`;
-            }
-        }
-
-        function backToRepoList() {
-            elements.repoListView.classList.remove('hidden');
-            elements.fileBrowserView.classList.add('hidden');
-        }
-
-        async function deleteFile(path, sha) {
-            const confirmed = confirm(`هل أنت متأكد من رغبتك في حذف الملف: ${path}؟`);
-            if(!confirmed) return;
-            
-            log(`جاري حذف الملف: ${path}...`, "warning");
-            try {
-                const res = await githubFetch(`repos/${state.selectedRepo.owner.login}/${state.selectedRepo.name}/contents/${path}`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({
-                        message: `حذف الملف ${path} عبر تطبيق GitHub Manager`,
-                        sha: sha
-                    })
+                // Constructing the URL for the zipball of the default branch
+                const url = `https://api.github.com/repos/${owner}/${repo}/zipball`;
+                const res = await fetch(url, {
+                    headers: { 'Authorization': `token ${state.token}` }
                 });
+                
                 if(res.ok) {
-                    log(`تم حذف الملف ${path} بنجاح.`, "success");
-                    browseRepo(state.selectedRepo.owner.login, state.selectedRepo.name, state.currentPath);
+                    const blob = await res.blob();
+                    const a = document.createElement('a');
+                    a.href = window.URL.createObjectURL(blob);
+                    a.download = `${repo}_main.zip`;
+                    a.click();
+                    log(`تم تحميل مستودع ${repo} بنجاح.`, "success");
                 } else {
-                    log("فشل عملية الحذف.", "error");
+                    log("فشل تحميل ملف ZIP.", "error");
                 }
             } catch(e) { log(e.message, "error"); }
         }
 
-        function triggerReplace(path, sha) {
-            state.replacePath = path;
-            state.replaceSha = sha;
-            document.getElementById('replaceFileInput').click();
-        }
-
-        async function executeReplacement(files) {
-            if(files.length === 0) return;
-            const file = files[0];
-            log(`جاري استبدال الملف ${state.replacePath} بملف جديد: ${file.name}...`, "warning");
-            
-            const base64Content = await toBase64(file);
-            const content = base64Content.split(',')[1];
-
-            try {
-                const res = await githubFetch(`repos/${state.selectedRepo.owner.login}/${state.selectedRepo.name}/contents/${state.replacePath}`, {
-                    method: 'PUT',
-                    body: JSON.stringify({
-                        message: `استبدال ${state.replacePath} بملف جديد ${file.name}`,
-                        content: content,
-                        sha: state.replaceSha
-                    })
-                });
-
-                if(res.ok) {
-                    log(`تم الاستبدال بنجاح وتحديث الملف.`, "success");
-                    browseRepo(state.selectedRepo.owner.login, state.selectedRepo.name, state.currentPath);
-                } else {
-                    const data = await res.json();
-                    log(`فشل الاستبدال: ${data.message}`, "error");
-                }
-            } catch(e) { log(e.message, "error"); }
-        }
-
-        function downloadFile(url, name) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = name;
-            link.target = "_blank";
-            link.click();
-            log(`جاري تحميل الملف: ${name}`, "success");
-        }
-
-        // --- Other Logic ---
-
-        function selectRepoById(id) {
-            const repo = state.repos.find(r => r.id === id);
-            if(repo) {
-                state.selectedRepo = repo;
-                document.getElementById('currentRepoBadge').classList.remove('hidden');
-                document.getElementById('selectedRepoName').innerText = repo.name;
-                document.getElementById('uploaderStatus').classList.add('hidden');
-                elements.btnStartUpload.disabled = false;
-                log(`تم اختيار: ${repo.name} للرفع.`, "info");
-                showTab('uploader');
-            }
+        function selectForUpload(id) {
+            const r = state.repos.find(i => i.id === id);
+            state.selectedRepo = r;
+            document.getElementById('currentRepoBadge').classList.remove('hidden');
+            document.getElementById('selectedRepoName').innerText = r.name;
+            elements.uploaderStatus.classList.add('hidden');
+            elements.btnStartUpload.disabled = false;
+            showTab('uploader');
+            log(`تم اختيار ${r.name} لعملية الرفع.`, "info");
         }
 
         function deselectRepo() {
             state.selectedRepo = null;
             document.getElementById('currentRepoBadge').classList.add('hidden');
-            document.getElementById('uploaderStatus').classList.remove('hidden');
+            elements.uploaderStatus.classList.remove('hidden');
             elements.btnStartUpload.disabled = true;
+        }
+
+        // --- Upload Logic ---
+        function handleFileSelection(files) {
+            log(`تم اختيار ${files.length} ملف/ملفات للرفع.`, "info");
         }
 
         async function startUploadProcess() {
             const files = document.getElementById('fileInput').files;
             if(!state.selectedRepo || files.length === 0) return;
-            
+
             const owner = state.selectedRepo.owner.login;
             const repo = state.selectedRepo.name;
             const shouldWipe = document.getElementById('wipeRepoCheck').checked;
 
             elements.btnStartUpload.disabled = true;
-            elements.btnStartUpload.innerText = "جاري العمل...";
+            elements.btnStartUpload.innerText = "جاري الرفع...";
 
             if(shouldWipe) {
                 log("تنبيه: جاري مسح محتويات المستودع...", "warning");
@@ -670,7 +474,7 @@
                 }
             }
 
-            log("اكتملت عملية الرفع.", "success");
+            log("اكتملت جميع عمليات الرفع.", "success");
             elements.btnStartUpload.disabled = false;
             elements.btnStartUpload.innerText = "تنفيذ الرفع الآن";
             fetchAllData();
@@ -678,32 +482,30 @@
 
         async function wipeRepo(owner, repo) {
             try {
-                const res = await githubFetch(`repos/${owner}/${repo}/git/trees/main?recursive=1`);
+                const res = await githubFetch(`repos/${owner}/${repo}/git/trees/${state.selectedRepo.default_branch || 'main'}?recursive=1`);
                 if(!res.ok) return;
                 const data = await res.json();
                 const blobs = data.tree.filter(i => i.type === 'blob');
                 for(const b of blobs) {
                     await githubFetch(`repos/${owner}/${repo}/contents/${b.path}`, {
                         method: 'DELETE',
-                        body: JSON.stringify({ message: "Wipe repo", sha: b.sha })
+                        body: JSON.stringify({ message: "Cleaning repo", sha: b.sha })
                     });
                 }
                 log(`تم حذف ${blobs.length} ملف قديم.`, "success");
-            } catch(e) { log("خطأ في المسح.", "error"); }
+            } catch(e) { log("Wipe error.", "error"); }
         }
 
         async function processZipAndUpload(zipFile, owner, repo) {
-            log(`فك ضغط ZIP: ${zipFile.name}...`, "warning");
             const zip = new JSZip();
             const contents = await zip.loadAsync(zipFile);
             let entries = [];
             contents.forEach((path, entry) => { if(!entry.dir) entries.push({path, entry}); });
-
+            
+            // Bypass root folder if all files are inside one
             if(entries.length > 0) {
                 const root = entries[0].path.split('/')[0];
-                const shared = entries.every(e => e.path.startsWith(root + '/'));
-                if(shared) {
-                    log(`تجاوز المجلد الحاوي: ${root}`, "warning");
+                if(entries.every(e => e.path.startsWith(root + '/'))) {
                     entries = entries.map(e => ({...e, path: e.path.substring(root.length + 1)}));
                 }
             }
@@ -716,49 +518,37 @@
 
         async function uploadToGithub(path, content, owner, repo) {
             log(`رفع: ${path}`);
-            const base64 = await toBase64(content);
-            const cleanBase64 = base64.split(',')[1];
-            const url = `repos/${owner}/${repo}/contents/${path}`;
-
+            const reader = new FileReader();
+            const base64Promise = new Promise(r => {
+                reader.onload = () => r(reader.result.split(',')[1]);
+                reader.readAsDataURL(content);
+            });
+            const base64 = await base64Promise;
+            
             let sha = null;
             try {
-                const check = await githubFetch(url);
+                const check = await githubFetch(`repos/${owner}/${repo}/contents/${path}`);
                 if(check.ok) sha = (await check.json()).sha;
             } catch(e) {}
 
-            const res = await githubFetch(url, {
+            const res = await githubFetch(`repos/${owner}/${repo}/contents/${path}`, {
                 method: 'PUT',
-                body: JSON.stringify({ message: `Push ${path}`, content: cleanBase64, sha })
+                body: JSON.stringify({ message: `Push ${path}`, content: base64, sha })
             });
             if(res.ok) log(`نجاح: ${path}`, "success");
             else log(`فشل: ${path}`, "error");
         }
 
-        function toBase64(file) {
-            return new Promise((r) => {
-                const reader = new FileReader();
-                reader.onload = () => r(reader.result);
-                reader.readAsDataURL(file);
-            });
+        // --- Other Helpers ---
+        function clearAppData() { localStorage.removeItem('gh_token'); location.reload(); }
+        function openTokenModal() { document.getElementById('tokenModal').classList.remove('hidden'); }
+        function closeTokenModal() { document.getElementById('tokenModal').classList.add('hidden'); }
+        function validateTokenFromModal() {
+            elements.tokenInput.value = document.getElementById('tokenInputMobile').value;
+            validateToken(); closeTokenModal();
         }
-
-        function handleFileSelection(files) {
-            log(`تم اختيار ${files.length} ملفات جاهزة للرفع.`, "info");
-        }
-
-        async function createNewRepo() {
-            const name = document.getElementById('newRepoName').value.trim();
-            if(!name) return;
-            const res = await githubFetch('user/repos', { method: 'POST', body: JSON.stringify({ name, auto_init: true }) });
-            if(res.ok) {
-                log(`تم إنشاء المستودع ${name} بنجاح.`, "success");
-                document.getElementById('newRepoName').value = "";
-                fetchAllData();
-            }
-        }
-
         function renderGists(gists) {
-            document.getElementById('gistsContainer').innerHTML = gists.map(g => `
+            elements.gistsContainer.innerHTML = gists.map(g => `
                 <div class="bg-[#161b22] border border-[#30363d] p-4 rounded-xl flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-3">
                         <i class="fas fa-code text-purple-500"></i>
@@ -768,15 +558,6 @@
                 </div>
             `).join('');
         }
-
-        function clearAppData() { localStorage.removeItem('gh_token'); location.reload(); }
-        function openTokenModal() { document.getElementById('tokenModal').classList.remove('hidden'); }
-        function closeTokenModal() { document.getElementById('tokenModal').classList.add('hidden'); }
-        function validateTokenFromModal() {
-            elements.tokenInput.value = document.getElementById('tokenInputMobile').value;
-            validateToken(); closeTokenModal();
-        }
-
     </script>
 </body>
 </html>
