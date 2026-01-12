@@ -1,564 +1,838 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GitHub Manager Ultra - النسخة المستقرة</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
-        
-        :root {
-            --gh-bg: #0d1117;
-            --gh-card: #161b22;
-            --gh-border: #30363d;
-            --gh-text: #c9d1d9;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>GitHub Manager Ultra — نسخة محسّنة</title>
 
-        body {
-            background-color: var(--gh-bg);
-            color: var(--gh-text);
-            font-family: 'Cairo', sans-serif;
-            -webkit-tap-highlight-color: transparent;
-        }
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 
-        .terminal-font { font-family: 'Fira Code', monospace; }
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
 
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 10px; }
+    :root{
+      --bg:#0d1117;
+      --card:#161b22;
+      --border:#30363d;
+      --text:#c9d1d9;
+      --muted:#8b949e;
+      --accent:#2f81f7;
+      --ok:#3fb950;
+      --warn:#d29922;
+      --err:#f85149;
+    }
 
-        .sidebar-transition { transition: transform 0.3s ease-in-out, width 0.3s ease-in-out; }
-        
-        .active-tab {
-            background-color: #21262d;
-            border-right: 4px solid #2f81f7;
-            color: #ffffff;
-        }
-
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease-out; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        input, button { font-size: 16px !important; }
-        
-        .terminal-height { height: 120px; }
-        @media (min-width: 768px) { .terminal-height { height: 160px; } }
-
-        .btn-action {
-            transition: all 0.2s ease;
-        }
-        .btn-action:active { transform: scale(0.95); }
-    </style>
+    html,body{height:100%;}
+    body{background:var(--bg);color:var(--text);font-family:"Cairo",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;}
+    code, pre, .mono{font-family:"Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    /* منع تكبير iOS عند التركيز */
+    input, button, select, textarea{font-size:16px;}
+    .card{background:var(--card);border:1px solid var(--border);}
+    .btn{border:1px solid var(--border);background:#21262d;}
+    .btn:hover{background:#2d333b;}
+    .btn-primary{background:var(--accent);border-color:transparent;color:white;}
+    .btn-primary:hover{filter:brightness(1.05);}
+    .btn-danger{background:var(--err);border-color:transparent;color:white;}
+    .btn-danger:hover{filter:brightness(1.05);}
+    .pill{border:1px solid var(--border);background:#0b1220;}
+    .divider{border-top:1px solid var(--border);}
+    .scrollbar::-webkit-scrollbar{height:10px;width:10px;}
+    .scrollbar::-webkit-scrollbar-thumb{background:#2d333b;border-radius:999px;}
+  </style>
 </head>
-<body class="overflow-hidden">
 
-    <div id="sidebarBackdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-black/50 z-40 hidden md:hidden"></div>
+<body>
+  <!-- Mobile backdrop -->
+  <div id="backdrop" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="toggleSidebar(false)"></div>
 
-    <div class="flex h-screen overflow-hidden">
-        
-        <!-- Sidebar -->
-        <aside id="sidebar" class="fixed inset-y-0 right-0 w-64 bg-[#161b22] border-l border-[#30363d] z-50 transform translate-x-full md:translate-x-0 sidebar-transition md:relative">
-            <div class="flex flex-col h-full">
-                <div class="p-5 border-b border-[#30363d] flex items-center justify-between">
-                    <span class="font-bold text-lg flex items-center gap-2 text-white text-nowrap">
-                        <i class="fab fa-github text-2xl"></i> GitHub Manager
-                    </span>
-                    <button onclick="toggleSidebar()" class="md:hidden text-gray-400">
-                        <i class="fas fa-times text-xl"></i>
-                    </button>
-                </div>
-                
-                <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
-                    <button onclick="showTab('dashboard')" class="nav-item w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#21262d] transition-all text-sm active-tab" id="btn-dashboard">
-                        <i class="fas fa-chart-pie w-5"></i> لوحة التحكم
-                    </button>
-                    <button onclick="showTab('explorer')" class="nav-item w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#21262d] transition-all text-sm" id="btn-explorer">
-                        <i class="fas fa-list w-5"></i> المستودعات
-                    </button>
-                    <button onclick="showTab('uploader')" class="nav-item w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#21262d] transition-all text-sm" id="btn-uploader">
-                        <i class="fas fa-cloud-upload-alt w-5"></i> رفع وتحديث
-                    </button>
-                    <button onclick="showTab('gists')" class="nav-item w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#21262d] transition-all text-sm" id="btn-gists">
-                        <i class="fas fa-code w-5"></i> القصاصات (Gists)
-                    </button>
-                    <div class="pt-4 pb-2 px-3 text-[10px] text-gray-500 font-bold uppercase tracking-widest">إعدادات</div>
-                    <button onclick="showTab('settings')" class="nav-item w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#21262d] transition-all text-sm" id="btn-settings">
-                        <i class="fas fa-cog w-5"></i> الضبط
-                    </button>
-                </nav>
-
-                <div id="sidebarUser" class="p-4 border-t border-[#30363d] bg-[#0d1117]/50 hidden">
-                    <div class="flex items-center gap-3 text-right">
-                        <img id="userAvatar" src="" class="w-10 h-10 rounded-full border border-[#30363d]">
-                        <div class="overflow-hidden">
-                            <div id="userLogin" class="text-sm font-bold text-white truncate">Username</div>
-                            <div id="userType" class="text-[10px] text-gray-500 uppercase">مستخدم Pro</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="flex-1 flex flex-col min-w-0 relative">
-            
-            <header class="h-14 md:h-16 bg-[#161b22] border-b border-[#30363d] flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
-                <div class="flex items-center gap-3">
-                    <button onclick="toggleSidebar()" class="md:hidden p-2 -mr-2 text-gray-400">
-                        <i class="fas fa-bars text-xl"></i>
-                    </button>
-                    <div id="currentRepoBadge" class="hidden flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 px-3 py-1 rounded-full text-blue-400 text-[11px] font-bold shadow-sm">
-                        <i class="fas fa-box"></i> <span id="selectedRepoName" class="truncate max-w-[120px] md:max-w-none text-nowrap">اسم المستودع</span>
-                        <i class="fas fa-times cursor-pointer hover:text-white" onclick="deselectRepo()"></i>
-                    </div>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <div class="relative group hidden sm:flex">
-                        <input type="password" id="tokenInput" placeholder="Token" class="bg-[#0d1117] border border-[#30363d] rounded-l px-3 py-1.5 text-xs w-32 md:w-48 focus:w-60 transition-all text-white">
-                        <button onclick="validateToken()" class="bg-blue-600 px-3 py-1.5 rounded-r hover:bg-blue-500 text-xs font-bold text-white flex items-center gap-1">
-                            <i class="fas fa-sync-alt" id="syncIcon"></i> <span class="hidden md:inline">اتصال</span>
-                        </button>
-                    </div>
-                    <button onclick="openTokenModal()" class="sm:hidden p-2 text-blue-500">
-                        <i class="fas fa-key text-lg"></i>
-                    </button>
-                </div>
-            </header>
-
-            <div class="flex-1 overflow-y-auto p-4 md:p-8 pb-40">
-                
-                <!-- Dashboard Tab -->
-                <div id="tab-dashboard" class="tab-content active space-y-6">
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                        <div class="bg-[#161b22] p-4 rounded-xl border border-[#30363d] flex flex-col items-center justify-center text-center shadow-md">
-                            <i class="fas fa-folder text-blue-500 text-xl mb-2"></i>
-                            <div class="text-xl font-bold text-white" id="stat-repos">0</div>
-                            <div class="text-[10px] text-gray-500 font-bold uppercase">مستودع</div>
-                        </div>
-                        <div class="bg-[#161b22] p-4 rounded-xl border border-[#30363d] flex flex-col items-center justify-center text-center shadow-md">
-                            <i class="fas fa-users text-green-500 text-xl mb-2"></i>
-                            <div class="text-xl font-bold text-white" id="stat-followers">0</div>
-                            <div class="text-[10px] text-gray-500 font-bold uppercase">متابع</div>
-                        </div>
-                        <div class="bg-[#161b22] p-4 rounded-xl border border-[#30363d] flex flex-col items-center justify-center text-center shadow-md">
-                            <i class="fas fa-code text-purple-500 text-xl mb-2"></i>
-                            <div class="text-xl font-bold text-white" id="stat-gists">0</div>
-                            <div class="text-[10px] text-gray-500 font-bold uppercase">قصاصات</div>
-                        </div>
-                        <div class="bg-[#161b22] p-4 rounded-xl border border-[#30363d] flex flex-col items-center justify-center text-center shadow-md">
-                            <i class="fas fa-star text-yellow-500 text-xl mb-2"></i>
-                            <div class="text-xl font-bold text-white" id="stat-stars">0</div>
-                            <div class="text-[10px] text-gray-500 font-bold uppercase">نجوم</div>
-                        </div>
-                    </div>
-
-                    <div id="userCard" class="bg-[#161b22] border border-[#30363d] p-6 rounded-2xl hidden md:flex flex-row items-center gap-8 shadow-xl"></div>
-                    <div id="userCardMobile" class="md:hidden bg-[#161b22] border border-[#30363d] p-5 rounded-2xl flex flex-col items-center text-center gap-4"></div>
-                </div>
-
-                <!-- Explorer Tab (Simplified Repo List) -->
-                <div id="tab-explorer" class="tab-content space-y-4">
-                    <div class="flex justify-between items-center px-1 mb-4">
-                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
-                            <i class="fas fa-list text-blue-500"></i> قائمة المستودعات
-                        </h2>
-                        <button onclick="fetchAllData()" class="text-xs text-gray-500 hover:text-white transition-colors"><i class="fas fa-sync"></i> تحديث</button>
-                    </div>
-                    <div id="reposContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div class="col-span-full py-20 text-center text-gray-500 italic">يرجى تسجيل الدخول لعرض مشاريعك</div>
-                    </div>
-                </div>
-
-                <!-- Uploader Tab -->
-                <div id="tab-uploader" class="tab-content space-y-6 max-w-3xl mx-auto">
-                    <div class="bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl space-y-6">
-                        <div class="flex items-center gap-4 border-b border-[#30363d] pb-4">
-                            <div class="bg-blue-500/10 p-3 rounded-xl shadow-inner"><i class="fas fa-cloud-upload-alt text-blue-500 text-2xl"></i></div>
-                            <div class="text-right">
-                                <h2 class="text-lg font-bold text-white">الرفع الذكي (Push)</h2>
-                                <p class="text-[11px] text-gray-500">رفع الملفات الفردية أو مجلدات ZIP</p>
-                            </div>
-                        </div>
-                        <div id="uploaderStatus" class="bg-yellow-500/10 border border-yellow-500/30 p-3 rounded-xl flex items-center gap-3 text-yellow-500 text-[10px] font-bold">
-                            <i class="fas fa-exclamation-triangle"></i> يجب اختيار مستودع أولاً للبدء بالرفع.
-                        </div>
-                        <div class="space-y-4">
-                            <label class="block border-2 border-dashed border-[#30363d] rounded-2xl p-10 text-center hover:border-blue-500 transition-all cursor-pointer">
-                                <i class="fas fa-file-import text-4xl text-gray-600 mb-3 block"></i>
-                                <span class="text-sm text-gray-300 font-bold block">اضغط لاختيار ملفات الرفع</span>
-                                <input type="file" id="fileInput" multiple class="hidden" onchange="handleFileSelection(this.files)">
-                            </label>
-
-                            <div class="flex items-center justify-between p-4 bg-[#0d1117] rounded-xl border border-[#30363d]">
-                                <div class="flex items-center gap-3 text-right">
-                                    <label class="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" id="wipeRepoCheck" class="sr-only peer">
-                                        <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
-                                    </label>
-                                    <div>
-                                        <div class="text-xs font-bold text-white">تفعيل مسح المحتويات (Wipe)</div>
-                                        <div class="text-[9px] text-gray-500">حذف الملفات القديمة قبل الرفع الجديد</div>
-                                    </div>
-                                </div>
-                                <i class="fas fa-broom text-gray-700"></i>
-                            </div>
-
-                            <button onclick="startUploadProcess()" id="btnStartUpload" class="w-full bg-[#238636] hover:bg-[#2ea043] py-4 rounded-xl font-bold text-white shadow-lg disabled:opacity-30 disabled:cursor-not-allowed text-sm">
-                                تنفيذ الرفع الآن
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Gists Tab -->
-                <div id="tab-gists" class="tab-content space-y-4">
-                    <h2 class="text-lg font-bold text-white px-1">القصاصات البرمجية (Gists)</h2>
-                    <div id="gistsContainer" class="grid grid-cols-1 gap-3"></div>
-                </div>
-
-                <!-- Settings Tab -->
-                <div id="tab-settings" class="tab-content max-w-2xl mx-auto text-right">
-                    <div class="bg-[#161b22] border border-[#30363d] p-6 rounded-2xl shadow-xl">
-                        <h2 class="text-lg font-bold text-white mb-6 border-b border-[#30363d] pb-4">إعدادات الحساب</h2>
-                        <button onclick="clearAppData()" class="text-red-500 text-xs font-bold hover:underline">تسجيل الخروج ومسح التوكن</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Global Terminal -->
-            <div class="fixed bottom-0 left-0 right-0 bg-[#010409] border-t border-[#30363d] z-40 terminal-height transition-all duration-300" id="terminalContainer">
-                <div class="bg-[#161b22] px-4 py-1.5 flex justify-between items-center border-b border-[#30363d]">
-                    <span class="text-[9px] font-mono font-bold text-gray-500 uppercase flex items-center gap-2 tracking-widest">
-                        <i class="fas fa-terminal"></i> Terminal Output
-                    </span>
-                    <button onclick="clearLogs()" class="text-[9px] text-gray-500 hover:text-white uppercase font-bold">مسح</button>
-                </div>
-                <div id="terminal" class="p-3 terminal-font text-[10px] md:text-[11px] overflow-y-auto h-[calc(100%-35px)] custom-scroll text-right"></div>
-            </div>
-        </main>
-    </div>
-
-    <!-- Token Modal -->
-    <div id="tokenModal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center p-6 backdrop-blur-sm">
-        <div class="bg-[#161b22] border border-[#30363d] p-8 rounded-3xl w-full max-w-sm space-y-6 shadow-2xl">
-            <h3 class="text-white font-bold text-center">أدخل رمز الدخول (Token)</h3>
-            <input type="password" id="tokenInputMobile" class="w-full bg-[#0d1117] border border-[#30363d] rounded-2xl px-4 py-4 text-white text-center" placeholder="ghp_xxxxxx">
-            <button onclick="validateTokenFromModal()" class="w-full bg-blue-600 py-4 rounded-2xl text-white font-bold text-sm">اتصال</button>
-            <button onclick="closeTokenModal()" class="w-full py-2 text-gray-500 text-xs font-bold uppercase">إلغاء</button>
+  <div class="min-h-screen flex flex-col md:flex-row">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed z-50 inset-y-0 right-0 w-[86vw] max-w-[320px] md:static md:w-80 transform translate-x-full md:translate-x-0 transition-transform duration-200">
+      <div class="h-full card rounded-none md:rounded-l-2xl overflow-hidden flex flex-col">
+        <div class="p-4 flex items-center justify-between gap-2 border-b border-[var(--border)]">
+          <div class="flex items-center gap-2">
+            <i class="fab fa-github text-xl"></i>
+            <span class="font-bold">GitHub Manager Ultra</span>
+          </div>
+          <button class="md:hidden btn rounded-xl px-3 py-2" onclick="toggleSidebar(false)" aria-label="إغلاق">
+            <i class="fas fa-xmark"></i>
+          </button>
         </div>
-    </div>
 
-    <script>
-        // --- State Management ---
-        const state = {
-            token: localStorage.getItem('gh_token') || '',
-            user: null,
-            repos: [],
-            selectedRepo: null,
-            activeTab: 'dashboard'
-        };
+        <div class="p-4 space-y-3">
+          <div class="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">المصادقة</div>
 
-        const elements = {
-            terminal: document.getElementById('terminal'),
-            sidebar: document.getElementById('sidebar'),
-            tokenInput: document.getElementById('tokenInput'),
-            uploaderStatus: document.getElementById('uploaderStatus'),
-            btnStartUpload: document.getElementById('btnStartUpload'),
-            reposContainer: document.getElementById('reposContainer'),
-            gistsContainer: document.getElementById('gistsContainer')
-        };
+          <label class="text-sm block">Personal Access Token</label>
+          <input id="tokenInput" type="password" placeholder="ghp_xxx أو github_pat_xxx"
+                 class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"/>
 
-        // --- Initialization ---
-        window.onload = () => {
-            if (state.token) {
-                elements.tokenInput.value = state.token;
-                validateToken();
-            }
-            adjustTerminalWidth();
-            log("System Ready. Mobile Optimized.", "info");
-        };
+          <div class="flex gap-2">
+            <button class="btn-primary rounded-2xl px-4 py-3 flex-1 font-bold" onclick="validateToken()">
+              <i class="fas fa-shield-halved ml-2"></i>تأكيد التوكن
+            </button>
+            <button class="btn rounded-2xl px-4 py-3" onclick="clearToken()" title="حذف التوكن">
+              <i class="fas fa-trash"></i>
+            </button>
+          </div>
 
-        window.onresize = adjustTerminalWidth;
+          <div id="userBox" class="hidden card rounded-2xl p-3">
+            <div class="flex items-center gap-3">
+              <img id="userAvatar" class="w-10 h-10 rounded-full border border-[var(--border)]" alt="avatar"/>
+              <div class="min-w-0">
+                <div class="font-bold truncate" id="userLogin"></div>
+                <div class="text-xs text-[var(--muted)] truncate" id="userName"></div>
+              </div>
+            </div>
+            <div class="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+              <div class="pill rounded-xl py-2">
+                <div class="font-bold" id="statRepos">-</div>
+                <div class="text-[var(--muted)]">Repos</div>
+              </div>
+              <div class="pill rounded-xl py-2">
+                <div class="font-bold" id="statFollowers">-</div>
+                <div class="text-[var(--muted)]">Followers</div>
+              </div>
+              <div class="pill rounded-xl py-2">
+                <div class="font-bold" id="statFollowing">-</div>
+                <div class="text-[var(--muted)]">Following</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        function adjustTerminalWidth() {
-            const container = document.getElementById('terminalContainer');
-            if (window.innerWidth >= 768) container.style.marginRight = "16rem";
-            else container.style.marginRight = "0";
-        }
+        <div class="divider"></div>
 
-        // --- Utility Functions ---
-        function toggleSidebar() {
-            elements.sidebar.classList.toggle('translate-x-full');
-            document.getElementById('sidebarBackdrop').classList.toggle('hidden');
-        }
+        <div class="p-4 space-y-3 flex-1 overflow-hidden">
+          <div class="flex items-center justify-between">
+            <div class="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">المستودعات</div>
+            <button class="btn rounded-xl px-3 py-2 text-sm" onclick="loadRepos()" title="تحديث">
+              <i class="fas fa-rotate"></i>
+            </button>
+          </div>
 
-        function log(msg, type = 'info') {
-            const time = new Date().toLocaleTimeString([], { hour12: false });
-            const div = document.createElement('div');
-            div.className = "mb-1 leading-relaxed";
-            let color = "text-blue-400";
-            if(type === 'error') color = "text-red-500 font-bold";
-            if(type === 'success') color = "text-green-500";
-            if(type === 'warning') color = "text-yellow-500";
-            div.innerHTML = `<span class="text-gray-600">[${time}]</span> <span class="${color}">${msg}</span>`;
-            elements.terminal.appendChild(div);
-            elements.terminal.scrollTop = elements.terminal.scrollHeight;
-        }
+          <input id="repoSearch" type="text" placeholder="بحث..."
+                 class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"/>
 
-        function clearLogs() { elements.terminal.innerHTML = ""; }
+          <div id="reposList" class="h-full overflow-auto pr-1 scrollbar space-y-2"></div>
+        </div>
 
-        function showTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active-tab'));
-            document.getElementById(`tab-${tabId}`).classList.add('active');
-            document.getElementById(`btn-${tabId}`).classList.add('active-tab');
-            state.activeTab = tabId;
-            if (window.innerWidth < 768) toggleSidebar();
-        }
+        <div class="p-4 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--muted)]">
+          <span class="truncate">SessionStorage فقط</span>
+          <span id="apiHint" class="truncate"></span>
+        </div>
+      </div>
+    </aside>
 
-        // --- GitHub API Actions ---
-        async function githubFetch(endpoint, options = {}) {
-            const url = `https://api.github.com/${endpoint}`;
-            return fetch(url, {
-                ...options,
-                headers: {
-                    'Authorization': `token ${state.token}`,
-                    'Accept': 'application/vnd.github.v3+json',
-                    ...options.headers
-                }
-            });
-        }
+    <!-- Main -->
+    <main class="flex-1 md:mr-0">
+      <!-- Topbar -->
+      <div class="sticky top-0 z-30 backdrop-blur bg-[var(--bg)]/80 border-b border-[var(--border)]">
+        <div class="px-4 py-3 flex items-center justify-between gap-2">
+          <button class="md:hidden btn rounded-xl px-3 py-2" onclick="toggleSidebar(true)" aria-label="فتح القائمة">
+            <i class="fas fa-bars"></i>
+          </button>
 
-        async function validateToken() {
-            const val = elements.tokenInput.value.trim();
-            if(!val) return;
-            state.token = val;
-            const icon = document.getElementById('syncIcon');
-            icon.classList.add('animate-spin');
-            try {
-                const res = await githubFetch('user');
-                if (res.ok) {
-                    state.user = await res.json();
-                    localStorage.setItem('gh_token', state.token);
-                    updateUIWithUser();
-                    log(`Authenticated: ${state.user.login}`, "success");
-                    fetchAllData();
-                } else log("Invalid Token.", "error");
-            } catch (err) { log(err.message, "error"); }
-            finally { icon.classList.remove('animate-spin'); }
-        }
+          <div class="min-w-0 flex-1">
+            <div class="text-xs text-[var(--muted)]">المستودع الحالي</div>
+            <div class="font-bold truncate" id="currentRepo">—</div>
+          </div>
 
-        function updateUIWithUser() {
-            const u = state.user;
-            document.getElementById('sidebarUser').classList.remove('hidden');
-            document.getElementById('userAvatar').src = u.avatar_url;
-            document.getElementById('userLogin').innerText = u.login;
-            document.getElementById('stat-repos').innerText = u.public_repos;
-            document.getElementById('stat-followers').innerText = u.followers;
-            const html = `<img src="${u.avatar_url}" class="w-24 h-24 rounded-3xl border-4 border-[#30363d]"><div class="text-center md:text-right flex-1 space-y-1"><h1 class="text-xl font-bold text-white">${u.name || u.login}</h1><p class="text-xs text-gray-400">${u.bio || ''}</p></div>`;
-            document.getElementById('userCard').innerHTML = html;
-            document.getElementById('userCardMobile').innerHTML = html;
-        }
+          <div class="hidden sm:flex items-center gap-2">
+            <button class="btn rounded-xl px-3 py-2" onclick="downloadZipDirect()" title="تنزيل ZIP مباشر">
+              <i class="fas fa-file-zipper ml-2"></i>ZIP مباشر
+            </button>
+            <button class="btn rounded-xl px-3 py-2" onclick="downloadZipLocalUI()" title="تنزيل ZIP محلي (للخاص أو عند فشل المباشر)">
+              <i class="fas fa-box-archive ml-2"></i>ZIP محلي
+            </button>
+            <button class="btn-danger rounded-xl px-3 py-2" onclick="wipeRepoCommit()" title="مسح المستودع (Commit)">
+              <i class="fas fa-broom ml-2"></i>Wipe
+            </button>
+          </div>
+        </div>
 
-        async function fetchAllData() {
-            if(!state.token) return;
-            try {
-                const res = await githubFetch('user/repos?sort=updated&per_page=100');
-                if(res.ok) {
-                    state.repos = await res.json();
-                    renderRepos();
-                }
-                const gRes = await githubFetch('gists');
-                if(gRes.ok) {
-                    const g = await gRes.json();
-                    document.getElementById('stat-gists').innerText = g.length;
-                    renderGists(g);
-                }
-            } catch (e) { log("Data fetch error.", "error"); }
-        }
+        <!-- Mobile quick actions -->
+        <div class="sm:hidden px-4 pb-3 grid grid-cols-2 gap-2">
+          <button class="btn rounded-2xl px-4 py-3 flex-1" onclick="downloadZipDirect()">
+            <i class="fas fa-file-zipper ml-2"></i>ZIP مباشر
+          </button>
+          <button class="btn rounded-2xl px-4 py-3 flex-1" onclick="downloadZipLocalUI()">
+            <i class="fas fa-box-archive ml-2"></i>ZIP محلي
+          </button>
+          <button class="btn-danger rounded-2xl px-4 py-3 flex-1" onclick="wipeRepoCommit()">
+            <i class="fas fa-broom ml-2"></i>Wipe
+          </button>
+        </div>
+      </div>
 
-        function renderRepos() {
-            elements.reposContainer.innerHTML = state.repos.map(r => `
-                <div class="bg-[#161b22] border border-[#30363d] p-5 rounded-2xl flex flex-col justify-between shadow-lg">
-                    <div class="mb-4">
-                        <h3 class="font-bold text-white text-md truncate mb-1">${r.name}</h3>
-                        <p class="text-[10px] text-gray-500 line-clamp-2 h-8 leading-relaxed">${r.description || 'لا يوجد وصف للمستودع'}</p>
-                    </div>
-                    
-                    <div class="flex gap-2">
-                        <button onclick="downloadRepoZip('${r.owner.login}', '${r.name}')" class="flex-1 bg-[#21262d] border border-[#30363d] hover:bg-[#30363d] text-blue-400 py-2.5 rounded-xl text-xs font-bold btn-action flex items-center justify-center gap-2">
-                            <i class="fas fa-file-archive"></i> تحميل ZIP
-                        </button>
-                        <button onclick="selectForUpload(${r.id})" class="flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2.5 rounded-xl text-xs font-bold btn-action flex items-center justify-center gap-2">
-                            <i class="fas fa-upload"></i> رفع ملفات
-                        </button>
-                    </div>
+      <div class="p-4 space-y-4">
+        <!-- Upload Card -->
+        <section class="card rounded-2xl p-4">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class="font-bold text-lg">رفع مشروع</div>
+              <div class="text-sm text-[var(--muted)]">Commit واحد + مسارات مجلدات + مؤشرات تقدم</div>
+            </div>
+            <div class="text-xs text-[var(--muted)] mono" id="branchInfo">—</div>
+          </div>
+
+          <div class="mt-4 grid md:grid-cols-2 gap-4">
+            <div class="space-y-3">
+              <label class="text-sm font-bold">اختيار ملفات</label>
+              <input id="fileInput" type="file" multiple
+                     class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white"/>
+
+              <label class="text-sm font-bold">اختيار مجلد (يدعم المسارات)</label>
+              <input id="folderInput" type="file" webkitdirectory directory multiple
+                     class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white"/>
+
+              <label class="text-sm font-bold">رفع ZIP</label>
+              <input id="zipInput" type="file" accept=".zip"
+                     class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white"/>
+
+              <div class="flex items-center gap-2">
+                <input id="stripZipRoot" type="checkbox" class="w-4 h-4">
+                <label for="stripZipRoot" class="text-sm">إزالة مجلد الجذر من ZIP (إن وُجد)</label>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <label class="text-sm font-bold">رسالة الـ Commit</label>
+              <input id="commitMessage" type="text" placeholder="Update project"
+                     class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"/>
+
+              <div class="flex items-center gap-2">
+                <input id="wipeBeforeUpload" type="checkbox" class="w-4 h-4">
+                <label for="wipeBeforeUpload" class="text-sm font-bold text-[var(--warn)]">Wipe قبل الرفع (يستبدل كل الملفات)</label>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+              <button id="btnUpload" class="btn-primary rounded-2xl px-4 py-4 w-full font-bold text-lg disabled:opacity-60 disabled:cursor-not-allowed" onclick="startUpload()">
+                <i class="fas fa-cloud-arrow-up ml-2"></i>بدء الرفع
+              </button>
+              <button id="btnStop" class="btn rounded-2xl px-4 py-4 w-full font-bold text-lg" onclick="stopCurrent()">
+                <i class="fas fa-stop ml-2"></i>إيقاف
+              </button>
+            </div>
+
+              <div id="progressBox" class="hidden">
+                <div class="flex justify-between text-xs text-[var(--muted)]">
+                  <span id="progressText">—</span>
+                  <span class="mono" id="progressCount">0/0</span>
                 </div>
-            `).join('');
-        }
-
-        async function downloadRepoZip(owner, repo) {
-            log(`جاري طلب تحميل المستودع ${repo} كملف ZIP...`, "warning");
-            try {
-                // Constructing the URL for the zipball of the default branch
-                const url = `https://api.github.com/repos/${owner}/${repo}/zipball`;
-                const res = await fetch(url, {
-                    headers: { 'Authorization': `token ${state.token}` }
-                });
-                
-                if(res.ok) {
-                    const blob = await res.blob();
-                    const a = document.createElement('a');
-                    a.href = window.URL.createObjectURL(blob);
-                    a.download = `${repo}_main.zip`;
-                    a.click();
-                    log(`تم تحميل مستودع ${repo} بنجاح.`, "success");
-                } else {
-                    log("فشل تحميل ملف ZIP.", "error");
-                }
-            } catch(e) { log(e.message, "error"); }
-        }
-
-        function selectForUpload(id) {
-            const r = state.repos.find(i => i.id === id);
-            state.selectedRepo = r;
-            document.getElementById('currentRepoBadge').classList.remove('hidden');
-            document.getElementById('selectedRepoName').innerText = r.name;
-            elements.uploaderStatus.classList.add('hidden');
-            elements.btnStartUpload.disabled = false;
-            showTab('uploader');
-            log(`تم اختيار ${r.name} لعملية الرفع.`, "info");
-        }
-
-        function deselectRepo() {
-            state.selectedRepo = null;
-            document.getElementById('currentRepoBadge').classList.add('hidden');
-            elements.uploaderStatus.classList.remove('hidden');
-            elements.btnStartUpload.disabled = true;
-        }
-
-        // --- Upload Logic ---
-        function handleFileSelection(files) {
-            log(`تم اختيار ${files.length} ملف/ملفات للرفع.`, "info");
-        }
-
-        async function startUploadProcess() {
-            const files = document.getElementById('fileInput').files;
-            if(!state.selectedRepo || files.length === 0) return;
-
-            const owner = state.selectedRepo.owner.login;
-            const repo = state.selectedRepo.name;
-            const shouldWipe = document.getElementById('wipeRepoCheck').checked;
-
-            elements.btnStartUpload.disabled = true;
-            elements.btnStartUpload.innerText = "جاري الرفع...";
-
-            if(shouldWipe) {
-                log("تنبيه: جاري مسح محتويات المستودع...", "warning");
-                await wipeRepo(owner, repo);
-            }
-
-            for(const file of files) {
-                if(file.name.toLowerCase().endsWith('.zip')) {
-                    await processZipAndUpload(file, owner, repo);
-                } else {
-                    await uploadToGithub(file.name, file, owner, repo);
-                }
-            }
-
-            log("اكتملت جميع عمليات الرفع.", "success");
-            elements.btnStartUpload.disabled = false;
-            elements.btnStartUpload.innerText = "تنفيذ الرفع الآن";
-            fetchAllData();
-        }
-
-        async function wipeRepo(owner, repo) {
-            try {
-                const res = await githubFetch(`repos/${owner}/${repo}/git/trees/${state.selectedRepo.default_branch || 'main'}?recursive=1`);
-                if(!res.ok) return;
-                const data = await res.json();
-                const blobs = data.tree.filter(i => i.type === 'blob');
-                for(const b of blobs) {
-                    await githubFetch(`repos/${owner}/${repo}/contents/${b.path}`, {
-                        method: 'DELETE',
-                        body: JSON.stringify({ message: "Cleaning repo", sha: b.sha })
-                    });
-                }
-                log(`تم حذف ${blobs.length} ملف قديم.`, "success");
-            } catch(e) { log("Wipe error.", "error"); }
-        }
-
-        async function processZipAndUpload(zipFile, owner, repo) {
-            const zip = new JSZip();
-            const contents = await zip.loadAsync(zipFile);
-            let entries = [];
-            contents.forEach((path, entry) => { if(!entry.dir) entries.push({path, entry}); });
-            
-            // Bypass root folder if all files are inside one
-            if(entries.length > 0) {
-                const root = entries[0].path.split('/')[0];
-                if(entries.every(e => e.path.startsWith(root + '/'))) {
-                    entries = entries.map(e => ({...e, path: e.path.substring(root.length + 1)}));
-                }
-            }
-
-            for(const item of entries) {
-                const blob = await item.entry.async("blob");
-                await uploadToGithub(item.path, blob, owner, repo);
-            }
-        }
-
-        async function uploadToGithub(path, content, owner, repo) {
-            log(`رفع: ${path}`);
-            const reader = new FileReader();
-            const base64Promise = new Promise(r => {
-                reader.onload = () => r(reader.result.split(',')[1]);
-                reader.readAsDataURL(content);
-            });
-            const base64 = await base64Promise;
-            
-            let sha = null;
-            try {
-                const check = await githubFetch(`repos/${owner}/${repo}/contents/${path}`);
-                if(check.ok) sha = (await check.json()).sha;
-            } catch(e) {}
-
-            const res = await githubFetch(`repos/${owner}/${repo}/contents/${path}`, {
-                method: 'PUT',
-                body: JSON.stringify({ message: `Push ${path}`, content: base64, sha })
-            });
-            if(res.ok) log(`نجاح: ${path}`, "success");
-            else log(`فشل: ${path}`, "error");
-        }
-
-        // --- Other Helpers ---
-        function clearAppData() { localStorage.removeItem('gh_token'); location.reload(); }
-        function openTokenModal() { document.getElementById('tokenModal').classList.remove('hidden'); }
-        function closeTokenModal() { document.getElementById('tokenModal').classList.add('hidden'); }
-        function validateTokenFromModal() {
-            elements.tokenInput.value = document.getElementById('tokenInputMobile').value;
-            validateToken(); closeTokenModal();
-        }
-        function renderGists(gists) {
-            elements.gistsContainer.innerHTML = gists.map(g => `
-                <div class="bg-[#161b22] border border-[#30363d] p-4 rounded-xl flex items-center justify-between shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <i class="fas fa-code text-purple-500"></i>
-                        <span class="text-xs font-bold text-white">${Object.keys(g.files)[0]}</span>
-                    </div>
-                    <a href="${g.html_url}" target="_blank" class="text-blue-500"><i class="fas fa-external-link-alt text-xs"></i></a>
+                <div class="mt-2 w-full bg-[#0b1220] border border-[var(--border)] rounded-full overflow-hidden">
+                  <div id="progressBar" class="h-3 bg-[var(--accent)] w-0 transition-all"></div>
                 </div>
-            `).join('');
+              </div>
+
+              <div class="text-xs text-[var(--muted)]">
+                ملاحظة: ملفات أكبر من <span class="mono">100MB</span> سيتم رفضها لتجنب مشاكل المتصفح.
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Terminal -->
+        <section class="card rounded-2xl p-4">
+          <div class="flex items-center justify-between">
+            <div class="font-bold">السجل</div>
+            <button class="btn rounded-xl px-3 py-2 text-sm" onclick="clearLog()"><i class="fas fa-eraser ml-2"></i>مسح</button>
+          </div>
+          <div id="terminal" class="mt-3 h-44 md:h-56 overflow-auto scrollbar bg-[#0b1220] border border-[var(--border)] rounded-2xl p-3 mono text-sm leading-relaxed"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "gh_token_session";
+  const MAX_FILE_BYTES = 100 * 1024 * 1024;
+  const SMALL_DELAY_MS = 200; // لتخفيف secondary rate limits
+
+  const state = {
+    token: sessionStorage.getItem(STORAGE_KEY) || "",
+    user: null,
+    repos: [],
+    selected: null, // {owner, repo, branch}
+    aborter: null,
+  };
+
+  const el = {
+    sidebar: document.getElementById("sidebar"),
+    backdrop: document.getElementById("backdrop"),
+    tokenInput: document.getElementById("tokenInput"),
+    userBox: document.getElementById("userBox"),
+    userAvatar: document.getElementById("userAvatar"),
+    userLogin: document.getElementById("userLogin"),
+    userName: document.getElementById("userName"),
+    statRepos: document.getElementById("statRepos"),
+    statFollowers: document.getElementById("statFollowers"),
+    statFollowing: document.getElementById("statFollowing"),
+    repoSearch: document.getElementById("repoSearch"),
+    reposList: document.getElementById("reposList"),
+    currentRepo: document.getElementById("currentRepo"),
+    branchInfo: document.getElementById("branchInfo"),
+    apiHint: document.getElementById("apiHint"),
+
+    fileInput: document.getElementById("fileInput"),
+    folderInput: document.getElementById("folderInput"),
+    zipInput: document.getElementById("zipInput"),
+    stripZipRoot: document.getElementById("stripZipRoot"),
+    commitMessage: document.getElementById("commitMessage"),
+    wipeBeforeUpload: document.getElementById("wipeBeforeUpload"),
+    btnUpload: document.getElementById("btnUpload"),
+    btnStop: document.getElementById("btnStop"),
+
+    progressBox: document.getElementById("progressBox"),
+    progressText: document.getElementById("progressText"),
+    progressCount: document.getElementById("progressCount"),
+    progressBar: document.getElementById("progressBar"),
+
+    terminal: document.getElementById("terminal"),
+  };
+
+  // --- UI helpers (safe text only) ---
+  const nowTime = () => new Date().toLocaleTimeString([], {hour12:false});
+  function log(msg, level="info"){
+    const row = document.createElement("div");
+    const time = document.createElement("span");
+    time.className = "text-[var(--muted)]";
+    time.textContent = `[${nowTime()}] `;
+
+    const text = document.createElement("span");
+    text.textContent = msg;
+
+    if(level==="success") text.className="text-[var(--ok)]";
+    if(level==="warning") text.className="text-[var(--warn)]";
+    if(level==="error") text.className="text-[var(--err)]";
+
+    row.appendChild(time);
+    row.appendChild(text);
+    el.terminal.appendChild(row);
+    el.terminal.scrollTop = el.terminal.scrollHeight;
+  }
+
+  function clearLog(){ el.terminal.textContent = ""; }
+
+  function setProgress({visible, text, done, total}){
+    if(visible){
+      el.progressBox.classList.remove("hidden");
+      el.progressText.textContent = text || "";
+      el.progressCount.textContent = `${done||0}/${total||0}`;
+      const pct = total ? Math.round((done/total)*100) : 0;
+      el.progressBar.style.width = `${Math.min(100, Math.max(0,pct))}%`;
+    } else {
+      el.progressBox.classList.add("hidden");
+      el.progressBar.style.width = "0%";
+      el.progressText.textContent = "—";
+      el.progressCount.textContent = "0/0";
+    }
+  }
+
+  // --- Sidebar ---
+  window.toggleSidebar = function(open){
+    const shouldOpen = (open === undefined) ? el.sidebar.classList.contains("translate-x-full") : open;
+    if(shouldOpen){
+      el.sidebar.classList.remove("translate-x-full");
+      el.backdrop.classList.remove("hidden");
+      document.body.style.overflow = "hidden";
+    } else {
+      el.sidebar.classList.add("translate-x-full");
+      el.backdrop.classList.add("hidden");
+      document.body.style.overflow = "";
+    }
+  };
+
+  // --- API wrapper with basic rate-limit handling ---
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  async function apiFetch(endpoint, options = {}, attempt=0){
+    const url = `https://api.github.com/${endpoint}`;
+    const headers = {
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+      ...(options.headers || {})
+    };
+    if(state.token) headers["Authorization"] = `Bearer ${state.token}`;
+    const res = await fetch(url, {...options, headers, signal: state.aborter?.signal });
+
+    if((res.status===403 || res.status===429) && attempt < 6){
+      const ra = res.headers.get("retry-after");
+      const wait = ra ? Number(ra)*1000 : 60_000;
+      log(`Rate limit/Secondary limit. Waiting ${Math.ceil(wait/1000)}s ...`, "warning");
+      await sleep(wait);
+      return apiFetch(endpoint, options, attempt+1);
+    }
+    return res;
+  }
+
+  async function apiJson(endpoint, options = {}){
+    const res = await apiFetch(endpoint, options);
+    if(!res.ok){
+      const txt = await res.text().catch(()=>"");
+      throw new Error(`GitHub API ${res.status}: ${txt || res.statusText}`);
+    }
+    return res.json();
+  }
+
+  
+  // --- Stop / Abort ---
+  window.stopCurrent = function(){
+    if(state.aborter){
+      try{ state.aborter.abort(); }catch(_){}
+      state.aborter = null;
+      log("تم إرسال أمر إيقاف.", "warning");
+    } else {
+      log("لا توجد عملية نشطة.", "info");
+    }
+  };
+// --- Auth ---
+  window.validateToken = async function(){
+    const t = el.tokenInput.value.trim();
+    if(!t){ log("أدخل التوكن أولاً.", "warning"); return; }
+    state.token = t;
+    sessionStorage.setItem(STORAGE_KEY, t);
+
+    log("جاري التحقق من التوكن...", "info");
+    try{
+      const user = await apiJson("user");
+      state.user = user;
+      el.userAvatar.src = user.avatar_url || "";
+      el.userLogin.textContent = user.login || "";
+      el.userName.textContent = user.name || "";
+      el.statRepos.textContent = String(user.public_repos ?? "-");
+      el.statFollowers.textContent = String(user.followers ?? "-");
+      el.statFollowing.textContent = String(user.following ?? "-");
+      el.userBox.classList.remove("hidden");
+      el.apiHint.textContent = user.login ? `@${user.login}` : "";
+      log(`تم التوثيق: ${user.login}`, "success");
+      await loadRepos();
+      // mobile: close sidebar after auth for usability
+      if(window.innerWidth < 768) toggleSidebar(false);
+    }catch(e){
+      log(e.message, "error");
+      clearToken(false);
+    }
+  };
+
+  window.clearToken = function(reload=true){
+    state.token = "";
+    state.user = null;
+    sessionStorage.removeItem(STORAGE_KEY);
+    el.tokenInput.value = "";
+    el.userBox.classList.add("hidden");
+    el.apiHint.textContent = "";
+    state.repos = [];
+    state.selected = null;
+    renderRepos([]);
+    el.currentRepo.textContent = "—";
+    el.branchInfo.textContent = "—";
+    if(reload) log("تم حذف التوكن.", "warning");
+  };
+
+  // --- Repos ---
+  function repoCard(repo){
+    const btn = document.createElement("button");
+    btn.className = "w-full text-right card rounded-2xl p-3 hover:brightness-110 transition";
+    const name = `${repo.owner.login}/${repo.name}`;
+    const desc = repo.description || "";
+    const meta = `${repo.private ? "Private" : "Public"} • ${repo.default_branch}`;
+
+    const t1 = document.createElement("div");
+    t1.className = "font-bold truncate";
+    t1.textContent = name;
+
+    const t2 = document.createElement("div");
+    t2.className = "text-xs text-[var(--muted)] truncate mt-1";
+    t2.textContent = desc;
+
+    const t3 = document.createElement("div");
+    t3.className = "text-[10px] text-[var(--muted)] mt-2 mono";
+    t3.textContent = meta;
+
+    btn.appendChild(t1); btn.appendChild(t2); btn.appendChild(t3);
+
+    btn.onclick = () => selectRepo(repo);
+    return btn;
+  }
+
+  function renderRepos(list){
+    el.reposList.textContent = "";
+    if(!list.length){
+      const p = document.createElement("div");
+      p.className="text-sm text-[var(--muted)] p-3";
+      p.textContent = state.token ? "لا توجد نتائج." : "وثّق التوكن ثم حمّل المستودعات.";
+      el.reposList.appendChild(p);
+      return;
+    }
+    for(const r of list) el.reposList.appendChild(repoCard(r));
+  }
+
+  window.loadRepos = async function(){
+    if(!state.token){ log("وثّق التوكن أولاً.", "warning"); return; }
+    log("جاري جلب المستودعات...", "info");
+    const all = [];
+    try{
+      for(let page=1; page<=20; page++){
+        const batch = await apiJson(`user/repos?per_page=100&sort=updated&direction=desc&page=${page}`);
+        all.push(...batch);
+        if(batch.length < 100) break;
+      }
+      state.repos = all;
+      log(`تم تحميل ${all.length} مستودع.`, "success");
+      filterRepos();
+    }catch(e){
+      log(e.message, "error");
+    }
+  };
+
+  function filterRepos(){
+    const q = (el.repoSearch.value || "").toLowerCase().trim();
+    if(!q){ renderRepos(state.repos); return; }
+    const filtered = state.repos.filter(r => {
+      const n = `${r.owner?.login||""}/${r.name||""}`.toLowerCase();
+      const d = (r.description||"").toLowerCase();
+      return n.includes(q) || d.includes(q);
+    });
+    renderRepos(filtered);
+  }
+  el.repoSearch.addEventListener("input", filterRepos);
+
+  function selectRepo(repo){
+    state.selected = { owner: repo.owner.login, repo: repo.name, branch: repo.default_branch, isPrivate: repo.private };
+    el.currentRepo.textContent = `${state.selected.owner}/${state.selected.repo}`;
+    el.branchInfo.textContent = `Branch: ${state.selected.branch}`;
+    log(`تم اختيار: ${state.selected.owner}/${state.selected.repo}@${state.selected.branch}`, "success");
+    if(window.innerWidth < 768) toggleSidebar(false);
+  }
+
+  // --- Base64 helpers ---
+  async function blobToBase64(blob){
+    const buf = await blob.arrayBuffer();
+    const bytes = new Uint8Array(buf);
+    const chunk = 0x8000;
+    let bin = "";
+    for(let i=0; i<bytes.length; i+=chunk){
+      bin += String.fromCharCode(...bytes.subarray(i, i+chunk));
+    }
+    return btoa(bin);
+  }
+
+  function normalizePath(p){
+    return p.replace(/^\/+/, "").replace(/\\/g, "/");
+  }
+
+  // --- ZIP processing ---
+  async function filesFromZip(zipFile, stripRoot){
+    const zip = await JSZip.loadAsync(zipFile);
+    const entries = [];
+    zip.forEach((relativePath, file) => {
+      if(!file.dir) entries.push({path: relativePath, file});
+    });
+    if(!entries.length) return [];
+
+    let rootPrefix = "";
+    if(stripRoot){
+      // إذا كانت كل الملفات داخل مجلد واحد في الجذر، قم بإزالته
+      const first = entries[0].path.split("/")[0];
+      const allUnderFirst = entries.every(e => e.path.startsWith(first + "/"));
+      if(allUnderFirst) rootPrefix = first + "/";
+    }
+
+    const out = [];
+    for(const e of entries){
+      const p = normalizePath(rootPrefix ? e.path.replace(rootPrefix, "") : e.path);
+      const b = await e.file.async("blob");
+      out.push({ path: p, blob: b });
+    }
+    return out;
+  }
+
+  // --- Upload (single commit) ---
+  async function pushFilesSingleCommit({owner, repo, branch, files, wipe, message, onProgress}){
+    // size check
+    for(const f of files){
+      if(f.blob.size > MAX_FILE_BYTES){
+        throw new Error(`File too large (>100MB): ${f.path}`);
+      }
+    }
+
+    const ref = await apiJson(`repos/${owner}/${repo}/git/ref/heads/${branch}`);
+    const parentSha = ref.object.sha;
+
+    const parentCommit = await apiJson(`repos/${owner}/${repo}/git/commits/${parentSha}`);
+    const baseTreeSha = parentCommit.tree.sha;
+
+    const treeEntries = [];
+    for(let i=0; i<files.length; i++){
+      const f = files[i];
+      onProgress?.({phase:"blob", done:i, total:files.length, current:f.path});
+      const base64 = await blobToBase64(f.blob);
+      await sleep(SMALL_DELAY_MS);
+
+      const createdBlob = await apiJson(`repos/${owner}/${repo}/git/blobs`, {
+        method: "POST",
+        body: JSON.stringify({ content: base64, encoding: "base64" })
+      });
+
+      treeEntries.push({ path: normalizePath(f.path), mode:"100644", type:"blob", sha: createdBlob.sha });
+      onProgress?.({phase:"blob", done:i+1, total:files.length, current:f.path});
+    }
+
+    onProgress?.({phase:"tree"});
+    const treeBody = wipe ? { tree: treeEntries } : { base_tree: baseTreeSha, tree: treeEntries };
+    const newTree = await apiJson(`repos/${owner}/${repo}/git/trees`, { method:"POST", body: JSON.stringify(treeBody) });
+
+    onProgress?.({phase:"commit"});
+    const newCommit = await apiJson(`repos/${owner}/${repo}/git/commits`, {
+      method:"POST",
+      body: JSON.stringify({ message, tree: newTree.sha, parents: [parentSha] })
+    });
+
+    onProgress?.({phase:"ref"});
+    await apiJson(`repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+      method:"PATCH",
+      body: JSON.stringify({ sha: newCommit.sha, force: false })
+    });
+
+    return newCommit.sha;
+  }
+
+  // --- Gather selected files ---
+  async function collectSelectedFiles(){
+    const files = [];
+
+    // direct files
+    for(const f of (el.fileInput.files || [])){
+      files.push({ path: normalizePath(f.name), blob: f });
+    }
+
+    // folder files
+    for(const f of (el.folderInput.files || [])){
+      const p = normalizePath(f.webkitRelativePath || f.name);
+      files.push({ path: p, blob: f });
+    }
+
+    // zip
+    if(el.zipInput.files && el.zipInput.files.length){
+      const zipFile = el.zipInput.files[0];
+      log(`فك ضغط ZIP: ${zipFile.name}`, "warning");
+      const zFiles = await filesFromZip(zipFile, el.stripZipRoot.checked);
+      files.push(...zFiles);
+    }
+
+    // dedupe by path (keep last)
+    const map = new Map();
+    for(const f of files){ map.set(f.path, f); }
+    const out = [...map.values()];
+
+    // basic sanity
+    const bad = out.find(x => !x.path || x.path.endsWith("/"));
+    if(bad) throw new Error(`Invalid path: ${bad.path}`);
+
+    return out;
+  }
+
+  window.startUpload = async function(){
+    if(!state.token){ log("وثّق التوكن أولاً.", "warning"); return; }
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+
+    const msg = (el.commitMessage.value || "").trim() || "Update project";
+    const wipe = el.wipeBeforeUpload.checked;
+
+    // abort controller per run
+    state.aborter = new AbortController();
+
+    try{
+      el.btnUpload.disabled = true;
+      el.btnStop.disabled = false;
+      setProgress({visible:true, text:"تحضير الملفات...", done:0, total:1});
+      const files = await collectSelectedFiles();
+      if(!files.length){ throw new Error("لم يتم اختيار ملفات/مجلد/ZIP."); }
+
+      log(`عدد الملفات: ${files.length}`, "info");
+      if(files.length > 800){
+        log("تحذير: عدد ملفات كبير وقد يستهلك Rate Limit. يُفضل تقسيم الرفع.", "warning");
+      }
+
+      setProgress({visible:true, text:"رفع Blobs...", done:0, total:files.length});
+
+      const commitSha = await pushFilesSingleCommit({
+        owner: state.selected.owner,
+        repo: state.selected.repo,
+        branch: state.selected.branch,
+        files,
+        wipe,
+        message: msg,
+        onProgress: ({phase, done, total, current}) => {
+          if(phase==="blob"){
+            setProgress({visible:true, text:`رفع: ${current}`, done, total});
+          }else if(phase==="tree"){
+            setProgress({visible:true, text:"إنشاء Tree...", done:total, total});
+          }else if(phase==="commit"){
+            setProgress({visible:true, text:"إنشاء Commit...", done:total, total});
+          }else if(phase==="ref"){
+            setProgress({visible:true, text:"تحديث الفرع...", done:total, total});
+          }
         }
-    </script>
+      });
+
+      setProgress({visible:true, text:"اكتمل.", done:files.length, total:files.length});
+      log(`تم الرفع بنجاح (Commit واحد): ${commitSha}`, "success");
+    }catch(e){
+      if(e.name === "AbortError"){
+        log("تم إيقاف العملية.", "warning");
+      }else{
+        log(e.message || String(e), "error");
+      }
+    }finally{
+      el.btnUpload.disabled = false;
+      el.btnStop.disabled = true;
+      // keep progress visible briefly
+      await sleep(600);
+      setProgress({visible:false});
+      state.aborter = null;
+    }
+  };
+
+  // --- Wipe as single commit (empty tree) ---
+  window.wipeRepoCommit = async function(){
+    if(!state.token){ log("وثّق التوكن أولاً.", "warning"); return; }
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+
+    state.aborter = new AbortController();
+    try{
+      el.btnStop.disabled = false;
+      log("جاري تنفيذ Wipe عبر Commit واحد...", "warning");
+      setProgress({visible:true, text:"تحضير...", done:0, total:1});
+
+      const {owner, repo, branch} = state.selected;
+      const ref = await apiJson(`repos/${owner}/${repo}/git/ref/heads/${branch}`);
+      const parentSha = ref.object.sha;
+
+      const emptyTree = await apiJson(`repos/${owner}/${repo}/git/trees`, {
+        method:"POST",
+        body: JSON.stringify({ tree: [] })
+      });
+
+      const commit = await apiJson(`repos/${owner}/${repo}/git/commits`, {
+        method:"POST",
+        body: JSON.stringify({ message: "Wipe repository (single commit)", tree: emptyTree.sha, parents: [parentSha] })
+      });
+
+      await apiJson(`repos/${owner}/${repo}/git/refs/heads/${branch}`, {
+        method:"PATCH",
+        body: JSON.stringify({ sha: commit.sha, force: false })
+      });
+
+      log(`تم Wipe بنجاح: ${commit.sha}`, "success");
+    }catch(e){
+      if(e.name === "AbortError"){
+        log("تم إيقاف العملية.", "warning");
+      }else{
+        log(e.message || String(e), "error");
+      }
+    }finally{
+      el.btnStop.disabled = true;
+      await sleep(600);
+      setProgress({visible:false});
+      state.aborter = null;
+    }
+  };
+
+  // --- ZIP Download ---
+  function directZipUrl(){
+    if(!state.selected) return null;
+    const {owner, repo, branch} = state.selected;
+    return `https://github.com/${owner}/${repo}/archive/refs/heads/${branch}.zip`;
+  }
+
+  async function downloadZipLocal(){
+    el.btnStop.disabled = false;
+    const {owner, repo, branch} = state.selected;
+    log(`تنزيل ZIP محليًا: ${owner}/${repo}@${branch}`, "warning");
+    state.aborter = new AbortController();
+
+    try{
+      setProgress({visible:true, text:"جلب ref...", done:0, total:4});
+      const ref = await apiJson(`repos/${owner}/${repo}/git/ref/heads/${branch}`);
+      setProgress({visible:true, text:"جلب commit...", done:1, total:4});
+      const commit = await apiJson(`repos/${owner}/${repo}/git/commits/${ref.object.sha}`);
+      const treeSha = commit.tree.sha;
+
+      setProgress({visible:true, text:"جلب tree...", done:2, total:4});
+      const tree = await apiJson(`repos/${owner}/${repo}/git/trees/${treeSha}?recursive=1`);
+      const blobs = (tree.tree || []).filter(x => x.type === "blob");
+
+      if(blobs.length > 1500){
+        log("تحذير: مستودع كبير. تنزيل ZIP محليًا قد يفشل بسبب Rate Limit. استخدم التنزيل المباشر إذا أمكن.", "warning");
+      }
+
+      const zip = new JSZip();
+      for(let i=0; i<blobs.length; i++){
+        const b = blobs[i];
+        setProgress({visible:true, text:`تحميل: ${b.path}`, done:i, total:blobs.length});
+        const blob = await apiJson(`repos/${owner}/${repo}/git/blobs/${b.sha}`);
+        // content base64 with newlines sometimes
+        const b64 = (blob.content || "").replace(/\n/g, "");
+        const bin = atob(b64);
+        const u8 = new Uint8Array(bin.length);
+        for(let j=0; j<bin.length; j++) u8[j] = bin.charCodeAt(j);
+        zip.file(b.path, u8);
+        await sleep(SMALL_DELAY_MS);
+      }
+
+      setProgress({visible:true, text:"توليد ZIP...", done:blobs.length, total:blobs.length});
+      const zipBlob = await zip.generateAsync({type:"blob"});
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(zipBlob);
+      a.download = `${repo}_${branch}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(a.href);
+
+      log("تم تنزيل ZIP محليًا.", "success");
+    } finally {
+      el.btnStop.disabled = true;
+      await sleep(600);
+      setProgress({visible:false});
+      state.aborter = null;
+    }
+  }
+
+  window.downloadZipDirect = function(){
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+    const url = directZipUrl();
+    if(!url) return;
+    log("تنزيل ZIP مباشر...", "info");
+    window.open(url, "_blank");
+  };
+
+  window.downloadZipLocalUI = async function(){
+    if(!state.token){ log("وثّق التوكن أولاً.", "warning"); return; }
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+    await downloadZipLocal();
+  };
+
+    // --- Init ---
+  function init(){
+    if(el.btnStop) el.btnStop.disabled = true;
+    if(state.token){
+      el.tokenInput.value = state.token;
+      // silent validate (no reload loops)
+      validateToken().catch(()=>{});
+    } else {
+      renderRepos([]);
+    }
+    log("جاهز. (Commit واحد + Wipe سريع + ZIP)", "success");
+  }
+  init();
+
+})();
+</script>
 </body>
 </html>
-
