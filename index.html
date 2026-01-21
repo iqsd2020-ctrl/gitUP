@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GitHub Manager Ultra — نسخة محسّنة</title>
+  <title>GIT UP</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -119,7 +119,7 @@
         </div>
 
         <div class="p-4 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--muted)]">
-          <span class="truncate">SessionStorage فقط</span>
+          <span class="truncate">LocalStorage</span>
           <span id="apiHint" class="truncate"></span>
         </div>
       </div>
@@ -252,7 +252,7 @@
   const SMALL_DELAY_MS = 200; // لتخفيف secondary rate limits
 
   const state = {
-    token: sessionStorage.getItem(STORAGE_KEY) || "",
+    token: localStorage.getItem(STORAGE_KEY) || "",
     user: null,
     repos: [],
     selected: null, // {owner, repo, branch}
@@ -393,7 +393,7 @@
     const t = el.tokenInput.value.trim();
     if(!t){ log("أدخل التوكن أولاً.", "warning"); return; }
     state.token = t;
-    sessionStorage.setItem(STORAGE_KEY, t);
+    localStorage.setItem(STORAGE_KEY, t);
 
     log("جاري التحقق من التوكن...", "info");
     try{
@@ -420,7 +420,7 @@
   window.clearToken = function(reload=true){
     state.token = "";
     state.user = null;
-    sessionStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(STORAGE_KEY);
     el.tokenInput.value = "";
     el.userBox.classList.add("hidden");
     el.apiHint.textContent = "";
