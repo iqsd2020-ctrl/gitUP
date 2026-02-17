@@ -84,8 +84,8 @@
 
 <div class="min-h-screen flex flex-col md:flex-row">
     <!-- Sidebar -->
-    <aside id="sidebar" class="fixed z-50 inset-y-0 right-0 w-[86vw] max-w-[320px] md:static md:w-80 transform translate-x-full md:translate-x-0 transition-transform duration-200">
-      <div class="h-full card rounded-none md:rounded-l-2xl overflow-hidden flex flex-col">
+    <aside id="sidebar" class="fixed z-50 inset-y-0 right-0 w-[86vw] max-w-[360px] md:static md:w-[22rem] transform translate-x-full md:translate-x-0 transition-transform duration-300 ease-out will-change-transform">
+      <div class="h-full card rounded-none md:rounded-l-2xl md:my-3 md:mr-3 overflow-hidden shadow-2xl flex flex-col">
         <div class="p-4 flex items-center justify-between gap-2 border-b border-[var(--border)]">
           <div class="flex items-center gap-2">
             <i class="fab fa-github text-xl"></i>
@@ -150,7 +150,7 @@
           <input id="repoSearch" type="text" placeholder="بحث..."
                  class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"/>
 
-          <div id="reposList" class="h-full overflow-auto pr-1 scrollbar space-y-2"></div>
+          <div id="reposList" class="h-full overflow-auto pr-1 scrollbar space-y-2 pb-2"></div>
         </div>
 
         <div class="p-4 border-t border-[var(--border)] flex items-center justify-between text-xs text-[var(--muted)]">
@@ -324,6 +324,22 @@
           </div>
         </section>
 
+        <section id="filesSection" class="card rounded-2xl p-4 hidden">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <div class="font-bold">ملفات المستودع</div>
+              <div class="text-sm text-[var(--muted)] mono" id="filesPath">—</div>
+            </div>
+            <button id="btnFilesRefresh" class="btn rounded-xl px-3 py-2" onclick="refreshFiles()" disabled>
+              <i class="fas fa-rotate ml-2"></i>تحديث
+            </button>
+          </div>
+
+          <div id="filesBreadcrumb" class="mt-3 flex flex-wrap gap-2"></div>
+          <div id="filesList" class="mt-3 space-y-2"></div>
+          <div id="filesEmpty" class="mt-3 text-sm text-[var(--muted)] hidden">لا توجد عناصر.</div>
+        </section>
+
         <!-- Terminal -->
         <section class="card rounded-2xl p-4">
           <div class="flex items-center justify-between">
@@ -446,6 +462,7 @@ const STORAGE_KEY = "gh_token_session";
     repos: [],
     selected: null, // {owner, repo, branch, isPrivate}
     branches: [],
+    repoPath: "",
     aborter: null,
     deferredInstall: null,
     swReg: null,
@@ -495,6 +512,13 @@ const STORAGE_KEY = "gh_token_session";
     progressText: document.getElementById("progressText"),
     progressCount: document.getElementById("progressCount"),
     progressBar: document.getElementById("progressBar"),
+
+    filesSection: document.getElementById("filesSection"),
+    filesPath: document.getElementById("filesPath"),
+    filesBreadcrumb: document.getElementById("filesBreadcrumb"),
+    filesList: document.getElementById("filesList"),
+    filesEmpty: document.getElementById("filesEmpty"),
+    btnFilesRefresh: document.getElementById("btnFilesRefresh"),
 
     terminal: document.getElementById("terminal"),
   };
@@ -658,6 +682,13 @@ const STORAGE_KEY = "gh_token_session";
     state.repos = [];
     state.selected = null;
     state.branches = [];
+    state.repoPath = "";
+    if(el.filesSection) el.filesSection.classList.add("hidden");
+    if(el.filesPath) el.filesPath.textContent = "—";
+    if(el.filesBreadcrumb) el.filesBreadcrumb.textContent = "";
+    if(el.filesList) el.filesList.textContent = "";
+    if(el.filesEmpty) el.filesEmpty.classList.add("hidden");
+    if(el.btnFilesRefresh) el.btnFilesRefresh.disabled = true;
     renderRepos([]);
     el.currentRepo.textContent = "—";
     el.branchInfo.textContent = "—";
@@ -670,7 +701,8 @@ const STORAGE_KEY = "gh_token_session";
   // --- Repos ---
   function repoCard(repo){
     const btn = document.createElement("button");
-    btn.className = "w-full text-right card rounded-2xl p-3 hover:brightness-110 transition";
+    const isActive = !!(state.selected && state.selected.owner === repo.owner.login && state.selected.repo === repo.name);
+    btn.className = "w-full text-right card rounded-2xl p-3 transition outline-none focus:ring-2 focus:ring-[var(--accent)] " + (isActive ? "ring-2 ring-[var(--accent)] brightness-110" : "hover:brightness-110");
     const name = `${repo.owner.login}/${repo.name}`;
     const desc = repo.description || "";
     const meta = `${repo.private ? "خاص" : "عام"} • ${repo.default_branch}`;
@@ -738,8 +770,14 @@ const STORAGE_KEY = "gh_token_session";
   function selectRepo(repo){
     state.selected = { owner: repo.owner.login, repo: repo.name, branch: repo.default_branch, isPrivate: repo.private };
     state.branches = [];
+    state.repoPath = "";
     el.currentRepo.textContent = `${state.selected.owner}/${state.selected.repo}`;
     setSelectedBranch(state.selected.branch, false);
+    if(el.filesSection) el.filesSection.classList.remove("hidden");
+    if(el.btnFilesRefresh) el.btnFilesRefresh.disabled = false;
+    if(el.filesPath) el.filesPath.textContent = "/";
+    refreshFiles().catch(()=>{});
+    filterRepos();
     log(`تم اختيار: ${state.selected.owner}/${state.selected.repo}`, "success");
     refreshBranches().catch(()=>{});
     if(window.innerWidth < 768) toggleSidebar(false);
@@ -814,9 +852,142 @@ const STORAGE_KEY = "gh_token_session";
   if(el.branchSelect){
     el.branchSelect.addEventListener("change", () => {
       const v = el.branchSelect.value;
-      if(v) setSelectedBranch(v, true);
+      if(v){ setSelectedBranch(v, true); refreshFiles().catch(()=>{}); }
     });
   }
+
+  function encodePath(p){
+    return (p || "").split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  }
+
+  function setFilesPath(p){
+    state.repoPath = p || "";
+    if(el.filesPath) el.filesPath.textContent = "/" + state.repoPath;
+    renderFilesBreadcrumb();
+  }
+
+  function renderFilesBreadcrumb(){
+    if(!el.filesBreadcrumb) return;
+    el.filesBreadcrumb.textContent = "";
+    const parts = state.repoPath ? state.repoPath.split("/").filter(Boolean) : [];
+    const makeBtn = (label, path) => {
+      const b = document.createElement("button");
+      b.className = "btn rounded-xl px-3 py-1 text-sm";
+      b.textContent = label;
+      b.onclick = () => { setFilesPath(path); refreshFiles().catch(()=>{}); };
+      return b;
+    };
+    el.filesBreadcrumb.appendChild(makeBtn("الجذر", ""));
+    let acc = "";
+    for(const part of parts){
+      acc = acc ? `${acc}/${part}` : part;
+      el.filesBreadcrumb.appendChild(makeBtn(part, acc));
+    }
+  }
+
+  function renderFilesList(items){
+    if(!el.filesList) return;
+    el.filesList.textContent = "";
+    const sorted = (items || []).slice().sort((a,b) => {
+      const ta = a.type === "dir" ? 0 : 1;
+      const tb = b.type === "dir" ? 0 : 1;
+      if(ta !== tb) return ta - tb;
+      return (a.name || "").localeCompare(b.name || "", "ar");
+    });
+    if(el.filesEmpty){
+      if(sorted.length) el.filesEmpty.classList.add("hidden");
+      else el.filesEmpty.classList.remove("hidden");
+    }
+
+    for(const item of sorted){
+      const row = document.createElement("div");
+      row.className = "w-full text-right card rounded-2xl px-3 py-2 flex items-center justify-between gap-3";
+      if(item.type === "dir"){
+        row.classList.add("cursor-pointer","hover:brightness-110","transition");
+        row.onclick = () => { setFilesPath(item.path); refreshFiles().catch(()=>{}); };
+      }
+
+      const left = document.createElement("div");
+      left.className = "min-w-0 flex items-center gap-3";
+      const icon = document.createElement("i");
+      icon.className = item.type === "dir" ? "fas fa-folder" : "fas fa-file";
+      const name = document.createElement("div");
+      name.className = "truncate";
+      name.textContent = item.name || "";
+      left.appendChild(icon);
+      left.appendChild(name);
+
+      const right = document.createElement("div");
+      right.className = "shrink-0 flex items-center gap-2";
+      if(item.type !== "dir"){
+        const size = document.createElement("div");
+        size.className = "text-xs text-[var(--muted)] mono";
+        size.textContent = formatBytes(item.size || 0);
+        const dl = document.createElement("button");
+        dl.className = "btn rounded-xl px-3 py-2 text-xs";
+        dl.innerHTML = '<i class="fas fa-download ml-2"></i>تنزيل';
+        dl.onclick = (e) => { e.stopPropagation(); downloadSingleFile(item.path, item.name).catch(()=>{}); };
+        right.appendChild(size);
+        right.appendChild(dl);
+      }else{
+        const hint = document.createElement("div");
+        hint.className = "text-xs text-[var(--muted)]";
+        hint.innerHTML = '<i class="fas fa-angle-left ml-1"></i>فتح';
+        right.appendChild(hint);
+      }
+
+      row.appendChild(left);
+      row.appendChild(right);
+      el.filesList.appendChild(row);
+    }
+  }
+
+  async function downloadSingleFile(path, filename){
+    if(!state.selected) return;
+    const owner = state.selected.owner;
+    const repo = state.selected.repo;
+    const ref = state.selected.branch;
+    const ep = `repos/${owner}/${repo}/contents/${encodePath(path)}?ref=${encodeURIComponent(ref)}`;
+    const res = await apiFetch(ep, { headers: { "Accept": "application/vnd.github.raw" } });
+    if(!res.ok){
+      const txt = await res.text().catch(()=>"");
+      throw new Error(`فشل تنزيل الملف: ${res.status} ${txt || res.statusText}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename || (path.split("/").pop() || "file");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  window.refreshFiles = async function(){
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+    const owner = state.selected.owner;
+    const repo = state.selected.repo;
+    const ref = state.selected.branch;
+    const p = state.repoPath || "";
+    if(el.filesPath) el.filesPath.textContent = "/" + p;
+    if(el.filesEmpty) el.filesEmpty.classList.add("hidden");
+    if(el.filesList) el.filesList.textContent = "";
+    const ep = p ? `repos/${owner}/${repo}/contents/${encodePath(p)}?ref=${encodeURIComponent(ref)}` : `repos/${owner}/${repo}/contents?ref=${encodeURIComponent(ref)}`;
+    try{
+      const items = await apiJson(ep);
+      renderFilesBreadcrumb();
+      renderFilesList(Array.isArray(items) ? items : []);
+    }catch(e){
+      renderFilesBreadcrumb();
+      if(el.filesList){
+        const msg = document.createElement("div");
+        msg.className = "text-sm text-[var(--muted)] p-3";
+        msg.textContent = e.message;
+        el.filesList.appendChild(msg);
+      }
+    }
+  };
 
   window.openNewBranchModal = function(){
     if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
