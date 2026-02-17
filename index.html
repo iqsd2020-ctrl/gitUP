@@ -3,7 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>GIT UP</title>
+    <meta name="theme-color" content="#0d1117" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>GIT UP</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -40,6 +46,19 @@
     .divider{border-top:1px solid var(--border);}
     .scrollbar::-webkit-scrollbar{height:10px;width:10px;}
     .scrollbar::-webkit-scrollbar-thumb{background:#2d333b;border-radius:999px;}
+  
+    /* PWA + Mobile tweaks */
+    body{
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-top: env(safe-area-inset-top);
+      overflow-x: hidden;
+    }
+    @media (max-width: 640px){
+      #terminal{font-size:12px;}
+      .btn, .btn-primary, .btn-danger{min-height:44px;}
+      input, textarea, select{min-height:44px;}
+    }
+
   </style>
 </head>
 
@@ -47,14 +66,30 @@
   <!-- Mobile backdrop -->
   <div id="backdrop" class="fixed inset-0 bg-black/60 z-40 hidden" onclick="toggleSidebar(false)"></div>
 
-  <div class="min-h-screen flex flex-col md:flex-row">
+  
+
+  <!-- Modal -->
+  <div id="modalBackdrop" class="fixed inset-0 bg-black/60 z-[70] hidden" onclick="closeModal()"></div>
+  <div id="modal" class="fixed inset-0 z-[80] hidden items-center justify-center p-4">
+    <div class="card rounded-2xl w-full max-w-2xl p-4">
+      <div class="flex items-center justify-between gap-2">
+        <div id="modalTitle" class="font-bold text-lg"></div>
+        <button class="btn rounded-xl px-3 py-2" onclick="closeModal()" aria-label="إغلاق">
+          <i class="fas fa-xmark"></i>
+        </button>
+      </div>
+      <div id="modalBody" class="mt-4"></div>
+    </div>
+  </div>
+
+<div class="min-h-screen flex flex-col md:flex-row">
     <!-- Sidebar -->
     <aside id="sidebar" class="fixed z-50 inset-y-0 right-0 w-[86vw] max-w-[320px] md:static md:w-80 transform translate-x-full md:translate-x-0 transition-transform duration-200">
       <div class="h-full card rounded-none md:rounded-l-2xl overflow-hidden flex flex-col">
         <div class="p-4 flex items-center justify-between gap-2 border-b border-[var(--border)]">
           <div class="flex items-center gap-2">
             <i class="fab fa-github text-xl"></i>
-            <span class="font-bold">GitHub Manager Ultra</span>
+            <span class="font-bold">مدير GitHub</span>
           </div>
           <button class="md:hidden btn rounded-xl px-3 py-2" onclick="toggleSidebar(false)" aria-label="إغلاق">
             <i class="fas fa-xmark"></i>
@@ -64,7 +99,7 @@
         <div class="p-4 space-y-3">
           <div class="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">المصادقة</div>
 
-          <label class="text-sm block">Personal Access Token</label>
+          <label class="text-sm block">رمز الوصول الشخصي</label>
           <input id="tokenInput" type="password" placeholder="ghp_xxx أو github_pat_xxx"
                  class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"/>
 
@@ -140,7 +175,11 @@
           </div>
 
           <div class="hidden sm:flex items-center gap-2">
-            <button class="btn rounded-xl px-3 py-2" onclick="downloadZipDirect()" title="تنزيل ZIP مباشر">
+            
+            <button id="btnInstall" class="btn rounded-xl px-3 py-2 hidden" onclick="installPWA()" title="تثبيت التطبيق">
+              <i class="fas fa-download ml-2"></i>تثبيت
+            </button>
+<button class="btn rounded-xl px-3 py-2" onclick="downloadZipDirect()" title="تنزيل ZIP مباشر">
               <i class="fas fa-file-zipper ml-2"></i>ZIP مباشر
             </button>
             <button class="btn rounded-xl px-3 py-2" onclick="downloadZipLocalUI()" title="تنزيل ZIP محلي (للخاص أو عند فشل المباشر)">
@@ -160,10 +199,25 @@
           <button class="btn rounded-2xl px-4 py-3 flex-1" onclick="downloadZipLocalUI()">
             <i class="fas fa-box-archive ml-2"></i>ZIP محلي
           </button>
-          <button class="btn-danger rounded-2xl px-4 py-3 flex-1" onclick="wipeRepoCommit()">
+          
+          <button id="btnInstallMobile" class="btn rounded-2xl px-4 py-3 flex-1 hidden" onclick="installPWA()">
+            <i class="fas fa-download ml-2"></i>تثبيت
+          </button>
+<button class="btn-danger rounded-2xl px-4 py-3 flex-1 col-span-2" onclick="wipeRepoCommit()">
             <i class="fas fa-broom ml-2"></i>Wipe
           </button>
         </div>
+
+        <div id="updateBanner" class="hidden px-4 py-2 bg-[#0b1220] border-t border-[var(--border)] text-sm flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <div class="font-bold">يتوفر تحديث للتطبيق</div>
+            <div class="text-xs text-[var(--muted)]">اضغط "تحديث" لتفعيل النسخة الجديدة.</div>
+          </div>
+          <button class="btn rounded-xl px-3 py-2 text-sm" onclick="applyUpdate()">
+            <i class="fas fa-rotate ml-2"></i>تحديث
+          </button>
+        </div>
+
       </div>
 
       <div class="p-4 space-y-4">
@@ -177,7 +231,19 @@
             <div class="text-xs text-[var(--muted)] mono" id="branchInfo">—</div>
           </div>
 
-          <div class="mt-4 grid md:grid-cols-2 gap-4">
+          
+          <div class="mt-3 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+            <select id="branchSelect"
+                    class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                    disabled></select>
+            <button id="btnRefreshBranches" class="btn rounded-2xl px-4 py-3 font-bold" onclick="refreshBranches()" disabled>
+              <i class="fas fa-code-branch ml-2"></i>تحديث
+            </button>
+            <button id="btnNewBranch" class="btn rounded-2xl px-4 py-3 font-bold" onclick="openNewBranchModal()" disabled>
+              <i class="fas fa-plus ml-2"></i>فرع جديد
+            </button>
+          </div>
+<div class="mt-4 grid md:grid-cols-2 gap-4">
             <div class="space-y-3">
               <label class="text-sm font-bold">اختيار ملفات</label>
               <input id="fileInput" type="file" multiple
@@ -199,15 +265,40 @@
 
             <div class="space-y-3">
               <label class="text-sm font-bold">رسالة الـ Commit</label>
-              <input id="commitMessage" type="text" placeholder="Update project"
+              <input id="commitMessage" type="text" placeholder="مثال: تحديث المشروع"
                      class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"/>
 
               <div class="flex items-center gap-2">
                 <input id="wipeBeforeUpload" type="checkbox" class="w-4 h-4">
-                <label for="wipeBeforeUpload" class="text-sm font-bold text-[var(--warn)]">Wipe قبل الرفع (يستبدل كل الملفات)</label>
+                <label for="wipeBeforeUpload" class="text-sm font-bold text-[var(--warn)]">مسح قبل الرفع (يستبدل كل الملفات)</label>
               </div>
 
+              
+              <div class="divider my-2"></div>
+              <div class="text-xs text-[var(--muted)] font-bold uppercase tracking-widest">خيارات متقدمة</div>
+
+              <label class="text-sm font-bold">تجاهل مسارات (سطر لكل نمط)</label>
+              <textarea id="ignorePatterns" rows="4" placeholder="مثال: node_modules/&#10;.git/&#10;dist/&#10;*.log"
+                        class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"></textarea>
+
               <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-sm font-bold block mb-1">التوازي</label>
+                  <select id="uploadConcurrency"
+                          class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]">
+                    <option value="1">1</option>
+                    <option value="2" selected>2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                  </select>
+                </div>
+                <div class="flex flex-col justify-end">
+                  <button class="btn rounded-2xl px-4 py-3 w-full font-bold" onclick="previewSelectedFiles()">
+                    <i class="fas fa-list-check ml-2"></i>معاينة
+                  </button>
+                </div>
+              </div>
+<div class="grid grid-cols-2 gap-2">
               <button id="btnUpload" class="btn-primary rounded-2xl px-4 py-4 w-full font-bold text-lg disabled:opacity-60 disabled:cursor-not-allowed" onclick="startUpload()">
                 <i class="fas fa-cloud-arrow-up ml-2"></i>بدء الرفع
               </button>
@@ -247,7 +338,105 @@
 
 <script>
 (() => {
-  const STORAGE_KEY = "gh_token_session";
+  function clampInt(v, min, max){
+    v = Number.isFinite(v) ? Math.trunc(v) : min;
+    return Math.max(min, Math.min(max, v));
+  }
+
+  function formatBytes(bytes){
+    const units = ["B","KB","MB","GB"];
+    let b = Number(bytes) || 0;
+    let u = 0;
+    while(b >= 1024 && u < units.length-1){ b /= 1024; u++; }
+    return `${b.toFixed(u===0?0:1)} ${units[u]}`;
+  }
+
+  // --- Modal ---
+  window.openModal = function(title, bodyHtml){
+    if(!el.modal || !el.modalBackdrop) return;
+    el.modalTitle.textContent = title || "";
+    el.modalBody.innerHTML = bodyHtml || "";
+    el.modalBackdrop.classList.remove("hidden");
+    el.modal.classList.remove("hidden");
+    el.modal.classList.add("flex");
+    document.body.style.overflow = "hidden";
+  };
+
+  window.closeModal = function(){
+    if(!el.modal || !el.modalBackdrop) return;
+    el.modalBackdrop.classList.add("hidden");
+    el.modal.classList.add("hidden");
+    el.modal.classList.remove("flex");
+    el.modalTitle.textContent = "";
+    el.modalBody.innerHTML = "";
+    document.body.style.overflow = "";
+  };
+
+  // --- Ignore patterns (glob) ---
+  function compileIgnore(patternsText){
+    const lines = (patternsText || "").split(/\r?\n/).map(s => s.trim()).filter(Boolean).filter(s => !s.startsWith("#"));
+    const regs = [];
+    for(let p of lines){
+      p = normalizePath(p);
+      if(!p) continue;
+      if(p.endsWith("/")) p = p + "**";
+      const anchored = p.startsWith("/");
+      if(anchored) p = p.slice(1);
+
+      let rx = "";
+      let i = 0;
+      while(i < p.length){
+        const ch = p[i];
+        if(ch === "*"){
+          if(p[i+1] === "*"){
+            rx += ".*";
+            i += 2;
+          } else {
+            rx += "[^/]*";
+            i += 1;
+          }
+          continue;
+        }
+        if(ch === "?"){
+          rx += "[^/]";
+          i += 1;
+          continue;
+        }
+        rx += ch.replace(/[\\^$+?.()|\[\]{}]/g, "\\$&");
+        i += 1;
+      }
+
+      const prefix = anchored ? "^" : "(^|.*/)";
+      regs.push(new RegExp(prefix + rx + "$", "i"));
+    }
+    return regs;
+  }
+
+  function isIgnoredPath(path, regs){
+    if(!regs || !regs.length) return false;
+    const p = normalizePath(path);
+    for(const r of regs){
+      if(r.test(p)) return true;
+    }
+    return false;
+  }
+
+  // --- Concurrency helper ---
+  async function mapWithConcurrency(items, limit, worker){
+    const out = [];
+    let idx = 0;
+    const runners = new Array(Math.min(limit, items.length)).fill(0).map(async () => {
+      while(true){
+        const i = idx++;
+        if(i >= items.length) return;
+        out[i] = await worker(items[i], i);
+      }
+    });
+    await Promise.all(runners);
+    return out;
+  }
+
+const STORAGE_KEY = "gh_token_session";
   const MAX_FILE_BYTES = 100 * 1024 * 1024;
   const SMALL_DELAY_MS = 200; // لتخفيف secondary rate limits
 
@@ -255,8 +444,11 @@
     token: localStorage.getItem(STORAGE_KEY) || "",
     user: null,
     repos: [],
-    selected: null, // {owner, repo, branch}
+    selected: null, // {owner, repo, branch, isPrivate}
+    branches: [],
     aborter: null,
+    deferredInstall: null,
+    swReg: null,
   };
 
   const el = {
@@ -274,6 +466,20 @@
     reposList: document.getElementById("reposList"),
     currentRepo: document.getElementById("currentRepo"),
     branchInfo: document.getElementById("branchInfo"),
+    branchSelect: document.getElementById("branchSelect"),
+    btnRefreshBranches: document.getElementById("btnRefreshBranches"),
+    btnNewBranch: document.getElementById("btnNewBranch"),
+    ignorePatterns: document.getElementById("ignorePatterns"),
+    uploadConcurrency: document.getElementById("uploadConcurrency"),
+
+    modalBackdrop: document.getElementById("modalBackdrop"),
+    modal: document.getElementById("modal"),
+    modalTitle: document.getElementById("modalTitle"),
+    modalBody: document.getElementById("modalBody"),
+
+    btnInstall: document.getElementById("btnInstall"),
+    btnInstallMobile: document.getElementById("btnInstallMobile"),
+    updateBanner: document.getElementById("updateBanner"),
     apiHint: document.getElementById("apiHint"),
 
     fileInput: document.getElementById("fileInput"),
@@ -314,7 +520,7 @@
     el.terminal.scrollTop = el.terminal.scrollHeight;
   }
 
-  function clearLog(){ el.terminal.textContent = ""; }
+  window.clearLog = function(){ el.terminal.textContent = ""; };
 
   function setProgress({visible, text, done, total}){
     if(visible){
@@ -355,15 +561,40 @@
       "X-GitHub-Api-Version": "2022-11-28",
       ...(options.headers || {})
     };
+    const hasCT = Object.keys(headers).some(k => k.toLowerCase() === "content-type");
+    if(options.body != null && typeof options.body === "string" && !hasCT){
+      headers["Content-Type"] = "application/json";
+    }
     if(state.token) headers["Authorization"] = `Bearer ${state.token}`;
+
     const res = await fetch(url, {...options, headers, signal: state.aborter?.signal });
 
     if((res.status===403 || res.status===429) && attempt < 6){
-      const ra = res.headers.get("retry-after");
-      const wait = ra ? Number(ra)*1000 : 60_000;
-      log(`Rate limit/Secondary limit. Waiting ${Math.ceil(wait/1000)}s ...`, "warning");
-      await sleep(wait);
-      return apiFetch(endpoint, options, attempt+1);
+      const retryAfter = res.headers.get("retry-after");
+      const remaining = res.headers.get("x-ratelimit-remaining");
+      const reset = res.headers.get("x-ratelimit-reset");
+      const bodyTxt = await res.clone().text().catch(()=> "");
+
+      const isSecondary = /secondary rate limit/i.test(bodyTxt);
+      const isPrimaryExceeded = /rate limit exceeded/i.test(bodyTxt) || remaining === "0";
+
+      const shouldRetry = res.status === 429 || isSecondary || isPrimaryExceeded;
+      if(shouldRetry){
+        let waitMs = 0;
+        if(retryAfter){
+          waitMs = Math.max(1000, Number(retryAfter) * 1000);
+        } else if(isPrimaryExceeded && reset){
+          const resetMs = Number(reset) * 1000;
+          waitMs = Math.max(1000, resetMs - Date.now() + 1500);
+        } else {
+          const base = 1500 * Math.pow(2, attempt);
+          waitMs = Math.min(120000, base + Math.floor(Math.random() * 1000));
+        }
+
+        log(`تم الوصول لحدود GitHub API. انتظار ${Math.ceil(waitMs/1000)} ث...`, "warning");
+        await sleep(waitMs);
+        return apiFetch(endpoint, options, attempt+1);
+      }
     }
     return res;
   }
@@ -426,9 +657,13 @@
     el.apiHint.textContent = "";
     state.repos = [];
     state.selected = null;
+    state.branches = [];
     renderRepos([]);
     el.currentRepo.textContent = "—";
     el.branchInfo.textContent = "—";
+    if(el.branchSelect){ el.branchSelect.innerHTML=""; el.branchSelect.disabled = true; }
+    if(el.btnRefreshBranches) el.btnRefreshBranches.disabled = true;
+    if(el.btnNewBranch) el.btnNewBranch.disabled = true;
     if(reload) log("تم حذف التوكن.", "warning");
   };
 
@@ -438,7 +673,7 @@
     btn.className = "w-full text-right card rounded-2xl p-3 hover:brightness-110 transition";
     const name = `${repo.owner.login}/${repo.name}`;
     const desc = repo.description || "";
-    const meta = `${repo.private ? "Private" : "Public"} • ${repo.default_branch}`;
+    const meta = `${repo.private ? "خاص" : "عام"} • ${repo.default_branch}`;
 
     const t1 = document.createElement("div");
     t1.className = "font-bold truncate";
@@ -502,11 +737,146 @@
 
   function selectRepo(repo){
     state.selected = { owner: repo.owner.login, repo: repo.name, branch: repo.default_branch, isPrivate: repo.private };
+    state.branches = [];
     el.currentRepo.textContent = `${state.selected.owner}/${state.selected.repo}`;
-    el.branchInfo.textContent = `Branch: ${state.selected.branch}`;
-    log(`تم اختيار: ${state.selected.owner}/${state.selected.repo}@${state.selected.branch}`, "success");
+    setSelectedBranch(state.selected.branch, false);
+    log(`تم اختيار: ${state.selected.owner}/${state.selected.repo}`, "success");
+    refreshBranches().catch(()=>{});
     if(window.innerWidth < 768) toggleSidebar(false);
   }
+
+  function renderBranches(){
+    const sel = el.branchSelect;
+    if(!sel) return;
+    sel.innerHTML = "";
+    const opt0 = document.createElement("option");
+    opt0.value = "";
+    opt0.textContent = state.selected ? "اختر فرعاً" : "اختر مستودعاً أولاً";
+    sel.appendChild(opt0);
+
+    for(const name of state.branches){
+      const o = document.createElement("option");
+      o.value = name;
+      o.textContent = name;
+      sel.appendChild(o);
+    }
+  }
+
+  function setSelectedBranch(name, logIt=true){
+    if(!state.selected) return;
+    const b = (name || "").trim() || state.selected.branch;
+    state.selected.branch = b;
+    if(el.branchInfo) el.branchInfo.textContent = `الفرع: ${b}`;
+    if(el.branchSelect){
+      el.branchSelect.disabled = false;
+      el.branchSelect.value = b;
+    }
+    if(logIt) log(`تم تعيين الفرع: ${b}`, "info");
+  }
+
+  window.refreshBranches = async function(){
+    if(!state.token){ log("وثّق التوكن أولاً.", "warning"); return; }
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+
+    if(el.branchSelect) el.branchSelect.disabled = true;
+    if(el.btnRefreshBranches) el.btnRefreshBranches.disabled = true;
+    if(el.btnNewBranch) el.btnNewBranch.disabled = true;
+
+    const {owner, repo} = state.selected;
+    log("جاري جلب الفروع...", "info");
+
+    const all = [];
+    for(let page=1; page<=5; page++){
+      const batch = await apiJson(`repos/${owner}/${repo}/branches?per_page=100&page=${page}`);
+      all.push(...batch);
+      if(batch.length < 100) break;
+    }
+
+    const names = [...new Set(all.map(b => b.name))].sort((a,b) => a.localeCompare(b));
+    state.branches = names;
+
+    renderBranches();
+
+    const current = state.selected.branch;
+    if(current && !state.branches.includes(current)){
+      state.branches.unshift(current);
+      renderBranches();
+    }
+
+    if(el.branchSelect) el.branchSelect.disabled = false;
+    if(el.btnRefreshBranches) el.btnRefreshBranches.disabled = false;
+    if(el.btnNewBranch) el.btnNewBranch.disabled = false;
+
+    setSelectedBranch(current, false);
+    log(`تم تحميل ${state.branches.length} فرع.`, "success");
+  };
+
+  if(el.branchSelect){
+    el.branchSelect.addEventListener("change", () => {
+      const v = el.branchSelect.value;
+      if(v) setSelectedBranch(v, true);
+    });
+  }
+
+  window.openNewBranchModal = function(){
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+    const base = state.selected.branch;
+    openModal("إنشاء فرع جديد", `
+      <div class="space-y-3">
+        <div class="text-sm text-[var(--muted)]">الفرع الأساسي: <span class="mono">${base}</span></div>
+
+        <label class="text-sm font-bold block">اسم الفرع الجديد</label>
+        <input id="newBranchName" type="text" placeholder="مثال: feature/mobile"
+               class="w-full rounded-2xl px-4 py-3 bg-[#0b1220] border border-[var(--border)] text-white focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"/>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button class="btn-primary rounded-2xl px-4 py-3 font-bold" onclick="createBranchFromUI()">
+            <i class="fas fa-check ml-2"></i>إنشاء
+          </button>
+          <button class="btn rounded-2xl px-4 py-3 font-bold" onclick="closeModal()">
+            <i class="fas fa-xmark ml-2"></i>إلغاء
+          </button>
+        </div>
+      </div>
+    `);
+    setTimeout(() => {
+      const inp = document.getElementById("newBranchName");
+      if(inp) inp.focus();
+    }, 50);
+  };
+
+  window.createBranchFromUI = async function(){
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+    const inp = document.getElementById("newBranchName");
+    const name = (inp?.value || "").trim();
+    if(!name){ log("أدخل اسم الفرع.", "warning"); return; }
+    if(/\s/.test(name) || name.startsWith("/") || name.endsWith("/") || name.includes("..")){
+      log("اسم الفرع غير صالح.", "warning");
+      return;
+    }
+
+    const {owner, repo, branch} = state.selected;
+
+    try{
+      log(`جاري إنشاء فرع: ${name}`, "info");
+      const baseRef = await apiJson(`repos/${owner}/${repo}/git/ref/heads/${branch}`);
+      const sha = baseRef.object.sha;
+
+      await apiJson(`repos/${owner}/${repo}/git/refs`, {
+        method:"POST",
+        body: JSON.stringify({ ref: `refs/heads/${name}`, sha })
+      });
+
+      closeModal();
+      await refreshBranches();
+      setSelectedBranch(name, true);
+      log("تم إنشاء الفرع بنجاح.", "success");
+    }catch(e){
+      log(e.message || String(e), "error");
+    }
+  };
+
+
 
   // --- Base64 helpers ---
   async function blobToBase64(blob){
@@ -555,7 +925,7 @@
     // size check
     for(const f of files){
       if(f.blob.size > MAX_FILE_BYTES){
-        throw new Error(`File too large (>100MB): ${f.path}`);
+        throw new Error(`الملف أكبر من 100MB: ${f.path}`);
       }
     }
 
@@ -566,9 +936,11 @@
     const baseTreeSha = parentCommit.tree.sha;
 
     const treeEntries = [];
-    for(let i=0; i<files.length; i++){
-      const f = files[i];
-      onProgress?.({phase:"blob", done:i, total:files.length, current:f.path});
+    const concurrency = clampInt(Number(el.uploadConcurrency ? el.uploadConcurrency.value : 2), 1, 4);
+    let doneBlobs = 0;
+
+    await mapWithConcurrency(files, concurrency, async (f) => {
+      onProgress?.({phase:"blob", done:doneBlobs, total:files.length, current:f.path});
       const base64 = await blobToBase64(f.blob);
       await sleep(SMALL_DELAY_MS);
 
@@ -578,8 +950,9 @@
       });
 
       treeEntries.push({ path: normalizePath(f.path), mode:"100644", type:"blob", sha: createdBlob.sha });
-      onProgress?.({phase:"blob", done:i+1, total:files.length, current:f.path});
-    }
+      doneBlobs += 1;
+      onProgress?.({phase:"blob", done:doneBlobs, total:files.length, current:f.path});
+    });
 
     onProgress?.({phase:"tree"});
     const treeBody = wipe ? { tree: treeEntries } : { base_tree: baseTreeSha, tree: treeEntries };
@@ -632,14 +1005,83 @@
     const bad = out.find(x => !x.path || x.path.endsWith("/"));
     if(bad) throw new Error(`Invalid path: ${bad.path}`);
 
-    return out;
+
+    const ignoreRegs = compileIgnore(el.ignorePatterns ? el.ignorePatterns.value : "");
+    const kept = [];
+    let ignored = 0;
+    for(const f of out){
+      if(isIgnoredPath(f.path, ignoreRegs)){ ignored++; continue; }
+      kept.push(f);
+    }
+    if(ignored) log(`تم تجاهل ${ignored} ملف/مسار حسب قواعد التجاهل.`, "warning");
+
+    return kept;
+
   }
 
-  window.startUpload = async function(){
+  
+
+  window.previewSelectedFiles = async function(){
+    if(!state.token){ log("وثّق التوكن أولاً.", "warning"); return; }
+    if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
+    try{
+      log("جاري تجهيز المعاينة...", "info");
+      const files = await collectSelectedFiles();
+      if(!files.length){
+        log("لا توجد ملفات محددة.", "warning");
+        return;
+      }
+      let total = 0;
+      let maxF = {path:"", size:0};
+      for(const f of files){
+        total += f.blob.size || 0;
+        if((f.blob.size||0) > maxF.size) maxF = {path:f.path, size:f.blob.size||0};
+      }
+
+      const list = files.slice(0, 200).map(f => `<div class="flex items-center justify-between gap-3"><span class="mono truncate">${escapeHtml(f.path)}</span><span class="text-[var(--muted)] mono">${formatBytes(f.blob.size||0)}</span></div>`).join("");
+      const more = files.length > 200 ? `<div class="text-xs text-[var(--muted)] mt-2">تم إخفاء ${files.length-200} عنصر إضافي.</div>` : "";
+
+      openModal("معاينة الملفات", `
+        <div class="space-y-3">
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="pill rounded-xl p-3">
+              <div class="text-[var(--muted)] text-xs">عدد الملفات</div>
+              <div class="font-bold mono">${files.length}</div>
+            </div>
+            <div class="pill rounded-xl p-3">
+              <div class="text-[var(--muted)] text-xs">الحجم الكلي</div>
+              <div class="font-bold mono">${formatBytes(total)}</div>
+            </div>
+          </div>
+          <div class="pill rounded-xl p-3 text-sm">
+            <div class="text-[var(--muted)] text-xs">أكبر ملف</div>
+            <div class="mono truncate">${escapeHtml(maxF.path || "—")}</div>
+            <div class="text-[var(--muted)] mono">${formatBytes(maxF.size || 0)}</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="h-64 overflow-auto pr-1 scrollbar space-y-2 text-sm">
+            ${list}
+            ${more}
+          </div>
+        </div>
+      `);
+      log("تم فتح المعاينة.", "success");
+    }catch(e){
+      log(e.message || String(e), "error");
+    }
+  };
+
+  function escapeHtml(s){
+    return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;");
+  }
+
+window.startUpload = async function(){
     if(!state.token){ log("وثّق التوكن أولاً.", "warning"); return; }
     if(!state.selected){ log("اختر مستودعاً أولاً.", "warning"); return; }
 
-    const msg = (el.commitMessage.value || "").trim() || "Update project";
+    const msg = (el.commitMessage.value || "").trim() || "تحديث عبر GitUP";
     const wipe = el.wipeBeforeUpload.checked;
 
     // abort controller per run
@@ -819,20 +1261,115 @@
   };
 
     // --- Init ---
-  function init(){
+  
+
+  // --- PWA ---
+  function setInstallButtonsVisible(visible){
+    const v = !!visible;
+    if(el.btnInstall) el.btnInstall.classList.toggle("hidden", !v);
+    if(el.btnInstallMobile) el.btnInstallMobile.classList.toggle("hidden", !v);
+  }
+
+  function showUpdateBanner(show){
+    if(!el.updateBanner) return;
+    if(show) el.updateBanner.classList.remove("hidden");
+    else el.updateBanner.classList.add("hidden");
+  }
+
+  async function registerSW(){
+    if(!("serviceWorker" in navigator)) return;
+    try{
+      const reg = await navigator.serviceWorker.register("./sw.js");
+      state.swReg = reg;
+
+      if(reg.waiting && navigator.serviceWorker.controller){
+        showUpdateBanner(true);
+      }
+
+      reg.addEventListener("updatefound", () => {
+        const nw = reg.installing;
+        if(!nw) return;
+        nw.addEventListener("statechange", () => {
+          if(nw.state === "installed" && navigator.serviceWorker.controller){
+            showUpdateBanner(true);
+          }
+        });
+      });
+
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        window.location.reload();
+      });
+    }catch(_){
+      log("تعذر تسجيل Service Worker.", "warning");
+    }
+  }
+
+  window.applyUpdate = function(){
+    if(state.swReg && state.swReg.waiting){
+      state.swReg.waiting.postMessage({ type: "SKIP_WAITING" });
+    }
+  };
+
+  window.installPWA = async function(){
+    const p = state.deferredInstall;
+    if(!p){
+      log("التثبيت غير متاح حالياً.", "warning");
+      return;
+    }
+    p.prompt();
+    const choice = await p.userChoice.catch(()=>null);
+    state.deferredInstall = null;
+    setInstallButtonsVisible(false);
+    if(choice && choice.outcome === "accepted"){
+      log("تم بدء التثبيت.", "success");
+    } else {
+      log("تم إلغاء التثبيت.", "warning");
+    }
+  };
+
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    state.deferredInstall = e;
+    setInstallButtonsVisible(true);
+  });
+
+  window.addEventListener("appinstalled", () => {
+    setInstallButtonsVisible(false);
+    log("تم تثبيت التطبيق.", "success");
+  });
+
+  window.addEventListener("offline", () => log("غير متصل بالإنترنت.", "warning"));
+  window.addEventListener("online", () => log("تمت استعادة الاتصال.", "success"));
+
+function init(){
     if(el.btnStop) el.btnStop.disabled = true;
+
+    if(el.ignorePatterns && !el.ignorePatterns.value.trim()){
+      el.ignorePatterns.value = ".git/\nnode_modules/\ndist/\nbuild/\n*.log\n.DS_Store\nThumbs.db";
+    }
+
+    if(el.branchInfo) el.branchInfo.textContent = "—";
+    if(el.branchSelect) el.branchSelect.disabled = true;
+    if(el.btnRefreshBranches) el.btnRefreshBranches.disabled = true;
+    if(el.btnNewBranch) el.btnNewBranch.disabled = true;
+
+    setInstallButtonsVisible(false);
+    showUpdateBanner(false);
+    registerSW().catch(()=>{});
+
     if(state.token){
       el.tokenInput.value = state.token;
-      // silent validate (no reload loops)
       validateToken().catch(()=>{});
     } else {
       renderRepos([]);
     }
-    log("جاهز. (Commit واحد + Wipe سريع + ZIP)", "success");
+
+    log("جاهز.", "success");
   }
   init();
 
 })();
+
 </script>
 </body>
 </html>
